@@ -204,8 +204,42 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Page content */}
-        <main className="pb-24 lg:pb-8 px-4 sm:px-6 py-6 max-w-7xl mx-auto w-full">
+        <main
+          key={pathname}
+          className="pb-24 lg:pb-10 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto w-full animate-page-in"
+        >
           {children}
+        </main>
+      </div>
+
+      {/* Bottom nav (mobile) */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+        <div className="grid grid-cols-5">
+          {bottomNav.map((item) => {
+            const active = pathname === item.to;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-primary" />
+                )}
+                <Icon className="h-5 w-5" />
+                <span className="truncate max-w-full px-1">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}
         </main>
       </div>
 
