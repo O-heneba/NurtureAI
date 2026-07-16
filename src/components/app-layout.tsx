@@ -240,31 +240,3 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-        </main>
-      </div>
-
-      {/* Bottom nav (mobile) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card">
-        <div className="grid grid-cols-5">
-          {bottomNav.map((item) => {
-            const active = pathname === item.to;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium",
-                  active ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="truncate max-w-full px-1">{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    </div>
-  );
-}
