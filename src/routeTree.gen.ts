@@ -9,8 +9,86 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ReferralsRouteImport } from './routes/referrals'
+import { Route as PeopleRouteImport } from './routes/people'
+import { Route as NutritionRouteImport } from './routes/nutrition'
+import { Route as MaternalRouteImport } from './routes/maternal'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as HouseholdsRouteImport } from './routes/households'
+import { Route as CommunitiesRouteImport } from './routes/communities'
+import { Route as ChildHealthRouteImport } from './routes/child-health'
+import { Route as AssistantRouteImport } from './routes/assistant'
+import { Route as AssessmentsRouteImport } from './routes/assessments'
 import { Route as IndexRouteImport } from './routes/index'
 
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PeopleRoute = PeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NutritionRoute = NutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaternalRoute = MaternalRouteImport.update({
+  id: '/maternal',
+  path: '/maternal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HouseholdsRoute = HouseholdsRouteImport.update({
+  id: '/households',
+  path: '/households',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunitiesRoute = CommunitiesRouteImport.update({
+  id: '/communities',
+  path: '/communities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChildHealthRoute = ChildHealthRouteImport.update({
+  id: '/child-health',
+  path: '/child-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssistantRoute = AssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssessmentsRoute = AssessmentsRouteImport.update({
+  id: '/assessments',
+  path: '/assessments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +97,214 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/assessments': typeof AssessmentsRoute
+  '/assistant': typeof AssistantRoute
+  '/child-health': typeof ChildHealthRoute
+  '/communities': typeof CommunitiesRoute
+  '/households': typeof HouseholdsRoute
+  '/login': typeof LoginRoute
+  '/maternal': typeof MaternalRoute
+  '/nutrition': typeof NutritionRoute
+  '/people': typeof PeopleRoute
+  '/referrals': typeof ReferralsRoute
+  '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
+  '/welcome': typeof WelcomeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/assessments': typeof AssessmentsRoute
+  '/assistant': typeof AssistantRoute
+  '/child-health': typeof ChildHealthRoute
+  '/communities': typeof CommunitiesRoute
+  '/households': typeof HouseholdsRoute
+  '/login': typeof LoginRoute
+  '/maternal': typeof MaternalRoute
+  '/nutrition': typeof NutritionRoute
+  '/people': typeof PeopleRoute
+  '/referrals': typeof ReferralsRoute
+  '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
+  '/welcome': typeof WelcomeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/assessments': typeof AssessmentsRoute
+  '/assistant': typeof AssistantRoute
+  '/child-health': typeof ChildHealthRoute
+  '/communities': typeof CommunitiesRoute
+  '/households': typeof HouseholdsRoute
+  '/login': typeof LoginRoute
+  '/maternal': typeof MaternalRoute
+  '/nutrition': typeof NutritionRoute
+  '/people': typeof PeopleRoute
+  '/referrals': typeof ReferralsRoute
+  '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
+  '/welcome': typeof WelcomeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/assessments'
+    | '/assistant'
+    | '/child-health'
+    | '/communities'
+    | '/households'
+    | '/login'
+    | '/maternal'
+    | '/nutrition'
+    | '/people'
+    | '/referrals'
+    | '/reports'
+    | '/settings'
+    | '/welcome'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/assessments'
+    | '/assistant'
+    | '/child-health'
+    | '/communities'
+    | '/households'
+    | '/login'
+    | '/maternal'
+    | '/nutrition'
+    | '/people'
+    | '/referrals'
+    | '/reports'
+    | '/settings'
+    | '/welcome'
+  id:
+    | '__root__'
+    | '/'
+    | '/assessments'
+    | '/assistant'
+    | '/child-health'
+    | '/communities'
+    | '/households'
+    | '/login'
+    | '/maternal'
+    | '/nutrition'
+    | '/people'
+    | '/referrals'
+    | '/reports'
+    | '/settings'
+    | '/welcome'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AssessmentsRoute: typeof AssessmentsRoute
+  AssistantRoute: typeof AssistantRoute
+  ChildHealthRoute: typeof ChildHealthRoute
+  CommunitiesRoute: typeof CommunitiesRoute
+  HouseholdsRoute: typeof HouseholdsRoute
+  LoginRoute: typeof LoginRoute
+  MaternalRoute: typeof MaternalRoute
+  NutritionRoute: typeof NutritionRoute
+  PeopleRoute: typeof PeopleRoute
+  ReferralsRoute: typeof ReferralsRoute
+  ReportsRoute: typeof ReportsRoute
+  SettingsRoute: typeof SettingsRoute
+  WelcomeRoute: typeof WelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/people': {
+      id: '/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nutrition': {
+      id: '/nutrition'
+      path: '/nutrition'
+      fullPath: '/nutrition'
+      preLoaderRoute: typeof NutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maternal': {
+      id: '/maternal'
+      path: '/maternal'
+      fullPath: '/maternal'
+      preLoaderRoute: typeof MaternalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/households': {
+      id: '/households'
+      path: '/households'
+      fullPath: '/households'
+      preLoaderRoute: typeof HouseholdsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/communities': {
+      id: '/communities'
+      path: '/communities'
+      fullPath: '/communities'
+      preLoaderRoute: typeof CommunitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/child-health': {
+      id: '/child-health'
+      path: '/child-health'
+      fullPath: '/child-health'
+      preLoaderRoute: typeof ChildHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assistant': {
+      id: '/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assessments': {
+      id: '/assessments'
+      path: '/assessments'
+      fullPath: '/assessments'
+      preLoaderRoute: typeof AssessmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,17 +317,20 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AssessmentsRoute: AssessmentsRoute,
+  AssistantRoute: AssistantRoute,
+  ChildHealthRoute: ChildHealthRoute,
+  CommunitiesRoute: CommunitiesRoute,
+  HouseholdsRoute: HouseholdsRoute,
+  LoginRoute: LoginRoute,
+  MaternalRoute: MaternalRoute,
+  NutritionRoute: NutritionRoute,
+  PeopleRoute: PeopleRoute,
+  ReferralsRoute: ReferralsRoute,
+  ReportsRoute: ReportsRoute,
+  SettingsRoute: SettingsRoute,
+  WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
