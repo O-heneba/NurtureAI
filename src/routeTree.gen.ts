@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as PeopleRouteImport } from './routes/people'
+import { Route as MaternalRouteImport } from './routes/maternal'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HouseholdsRouteImport } from './routes/households'
 import { Route as CommunitiesRouteImport } from './routes/communities'
@@ -24,6 +25,11 @@ const WelcomeRoute = WelcomeRouteImport.update({
 const PeopleRoute = PeopleRouteImport.update({
   id: '/people',
   path: '/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaternalRoute = MaternalRouteImport.update({
+  id: '/maternal',
+  path: '/maternal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/communities': typeof CommunitiesRoute
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
+  '/maternal': typeof MaternalRoute
   '/people': typeof PeopleRoute
   '/welcome': typeof WelcomeRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/communities': typeof CommunitiesRoute
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
+  '/maternal': typeof MaternalRoute
   '/people': typeof PeopleRoute
   '/welcome': typeof WelcomeRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/communities': typeof CommunitiesRoute
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
+  '/maternal': typeof MaternalRoute
   '/people': typeof PeopleRoute
   '/welcome': typeof WelcomeRoute
 }
@@ -79,16 +88,25 @@ export interface FileRouteTypes {
     | '/communities'
     | '/households'
     | '/login'
+    | '/maternal'
     | '/people'
     | '/welcome'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/communities' | '/households' | '/login' | '/people' | '/welcome'
+  to:
+    | '/'
+    | '/communities'
+    | '/households'
+    | '/login'
+    | '/maternal'
+    | '/people'
+    | '/welcome'
   id:
     | '__root__'
     | '/'
     | '/communities'
     | '/households'
     | '/login'
+    | '/maternal'
     | '/people'
     | '/welcome'
   fileRoutesById: FileRoutesById
@@ -98,6 +116,7 @@ export interface RootRouteChildren {
   CommunitiesRoute: typeof CommunitiesRoute
   HouseholdsRoute: typeof HouseholdsRoute
   LoginRoute: typeof LoginRoute
+  MaternalRoute: typeof MaternalRoute
   PeopleRoute: typeof PeopleRoute
   WelcomeRoute: typeof WelcomeRoute
 }
@@ -116,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/people'
       fullPath: '/people'
       preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maternal': {
+      id: '/maternal'
+      path: '/maternal'
+      fullPath: '/maternal'
+      preLoaderRoute: typeof MaternalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -154,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   CommunitiesRoute: CommunitiesRoute,
   HouseholdsRoute: HouseholdsRoute,
   LoginRoute: LoginRoute,
+  MaternalRoute: MaternalRoute,
   PeopleRoute: PeopleRoute,
   WelcomeRoute: WelcomeRoute,
 }
