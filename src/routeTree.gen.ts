@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as NutritionRouteImport } from './routes/nutrition'
@@ -25,6 +26,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReferralsRoute = ReferralsRouteImport.update({
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/nutrition': typeof NutritionRoute
   '/people': typeof PeopleRoute
   '/referrals': typeof ReferralsRoute
+  '/reports': typeof ReportsRoute
   '/welcome': typeof WelcomeRoute
 }
 export interface FileRoutesByTo {
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/nutrition': typeof NutritionRoute
   '/people': typeof PeopleRoute
   '/referrals': typeof ReferralsRoute
+  '/reports': typeof ReportsRoute
   '/welcome': typeof WelcomeRoute
 }
 export interface FileRoutesById {
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/nutrition': typeof NutritionRoute
   '/people': typeof PeopleRoute
   '/referrals': typeof ReferralsRoute
+  '/reports': typeof ReportsRoute
   '/welcome': typeof WelcomeRoute
 }
 export interface FileRouteTypes {
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/people'
     | '/referrals'
+    | '/reports'
     | '/welcome'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/people'
     | '/referrals'
+    | '/reports'
     | '/welcome'
   id:
     | '__root__'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/people'
     | '/referrals'
+    | '/reports'
     | '/welcome'
   fileRoutesById: FileRoutesById
 }
@@ -183,6 +195,7 @@ export interface RootRouteChildren {
   NutritionRoute: typeof NutritionRoute
   PeopleRoute: typeof PeopleRoute
   ReferralsRoute: typeof ReferralsRoute
+  ReportsRoute: typeof ReportsRoute
   WelcomeRoute: typeof WelcomeRoute
 }
 
@@ -193,6 +206,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome'
       preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/referrals': {
@@ -287,6 +307,7 @@ const rootRouteChildren: RootRouteChildren = {
   NutritionRoute: NutritionRoute,
   PeopleRoute: PeopleRoute,
   ReferralsRoute: ReferralsRoute,
+  ReportsRoute: ReportsRoute,
   WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
