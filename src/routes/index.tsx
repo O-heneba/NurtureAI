@@ -8,13 +8,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import {
   CalendarCheck, AlertTriangle, Send, RefreshCw, HeartPulse, Baby, MapPin,
-  UserPlus, HomePlus, ClipboardCheck, Sparkles, Apple, Wifi, Activity,
+  UserPlus, ClipboardCheck, Apple, Wifi, Activity, Home as HomeIcon,
 } from "lucide-react";
 import { currentUser, recentActivities, upcomingVisits, communities } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
-
-// HomePlus doesn't exist in lucide — swap
-import { Home as HomeIcon } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
