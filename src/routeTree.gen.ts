@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HouseholdsRouteImport } from './routes/households'
 import { Route as CommunitiesRouteImport } from './routes/communities'
 import { Route as ChildHealthRouteImport } from './routes/child-health'
+import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as AssessmentsRouteImport } from './routes/assessments'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -54,6 +55,11 @@ const ChildHealthRoute = ChildHealthRouteImport.update({
   path: '/child-health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssistantRoute = AssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AssessmentsRoute = AssessmentsRouteImport.update({
   id: '/assessments',
   path: '/assessments',
@@ -68,6 +74,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assessments': typeof AssessmentsRoute
+  '/assistant': typeof AssistantRoute
   '/child-health': typeof ChildHealthRoute
   '/communities': typeof CommunitiesRoute
   '/households': typeof HouseholdsRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assessments': typeof AssessmentsRoute
+  '/assistant': typeof AssistantRoute
   '/child-health': typeof ChildHealthRoute
   '/communities': typeof CommunitiesRoute
   '/households': typeof HouseholdsRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/assessments': typeof AssessmentsRoute
+  '/assistant': typeof AssistantRoute
   '/child-health': typeof ChildHealthRoute
   '/communities': typeof CommunitiesRoute
   '/households': typeof HouseholdsRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/assessments'
+    | '/assistant'
     | '/child-health'
     | '/communities'
     | '/households'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/assessments'
+    | '/assistant'
     | '/child-health'
     | '/communities'
     | '/households'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/assessments'
+    | '/assistant'
     | '/child-health'
     | '/communities'
     | '/households'
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssessmentsRoute: typeof AssessmentsRoute
+  AssistantRoute: typeof AssistantRoute
   ChildHealthRoute: typeof ChildHealthRoute
   CommunitiesRoute: typeof CommunitiesRoute
   HouseholdsRoute: typeof HouseholdsRoute
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChildHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/assistant': {
+      id: '/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/assessments': {
       id: '/assessments'
       path: '/assessments'
@@ -218,6 +238,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssessmentsRoute: AssessmentsRoute,
+  AssistantRoute: AssistantRoute,
   ChildHealthRoute: ChildHealthRoute,
   CommunitiesRoute: CommunitiesRoute,
   HouseholdsRoute: HouseholdsRoute,
