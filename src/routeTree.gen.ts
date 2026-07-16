@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as PeopleRouteImport } from './routes/people'
+import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as MaternalRouteImport } from './routes/maternal'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HouseholdsRouteImport } from './routes/households'
@@ -34,6 +35,11 @@ const ReferralsRoute = ReferralsRouteImport.update({
 const PeopleRoute = PeopleRouteImport.update({
   id: '/people',
   path: '/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NutritionRoute = NutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MaternalRoute = MaternalRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
   '/maternal': typeof MaternalRoute
+  '/nutrition': typeof NutritionRoute
   '/people': typeof PeopleRoute
   '/referrals': typeof ReferralsRoute
   '/welcome': typeof WelcomeRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
   '/maternal': typeof MaternalRoute
+  '/nutrition': typeof NutritionRoute
   '/people': typeof PeopleRoute
   '/referrals': typeof ReferralsRoute
   '/welcome': typeof WelcomeRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
   '/maternal': typeof MaternalRoute
+  '/nutrition': typeof NutritionRoute
   '/people': typeof PeopleRoute
   '/referrals': typeof ReferralsRoute
   '/welcome': typeof WelcomeRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/households'
     | '/login'
     | '/maternal'
+    | '/nutrition'
     | '/people'
     | '/referrals'
     | '/welcome'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/households'
     | '/login'
     | '/maternal'
+    | '/nutrition'
     | '/people'
     | '/referrals'
     | '/welcome'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/households'
     | '/login'
     | '/maternal'
+    | '/nutrition'
     | '/people'
     | '/referrals'
     | '/welcome'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   HouseholdsRoute: typeof HouseholdsRoute
   LoginRoute: typeof LoginRoute
   MaternalRoute: typeof MaternalRoute
+  NutritionRoute: typeof NutritionRoute
   PeopleRoute: typeof PeopleRoute
   ReferralsRoute: typeof ReferralsRoute
   WelcomeRoute: typeof WelcomeRoute
@@ -194,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/people'
       fullPath: '/people'
       preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nutrition': {
+      id: '/nutrition'
+      path: '/nutrition'
+      fullPath: '/nutrition'
+      preLoaderRoute: typeof NutritionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/maternal': {
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   HouseholdsRoute: HouseholdsRoute,
   LoginRoute: LoginRoute,
   MaternalRoute: MaternalRoute,
+  NutritionRoute: NutritionRoute,
   PeopleRoute: PeopleRoute,
   ReferralsRoute: ReferralsRoute,
   WelcomeRoute: WelcomeRoute,
