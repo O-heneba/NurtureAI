@@ -41,12 +41,18 @@ function NavItem({ to, label, icon: Icon, active, onClick }: {
       to={to}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
         active
-          ? "bg-primary/10 text-primary"
+          ? "bg-primary/10 text-primary shadow-sm"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",
       )}
     >
+      <span
+        className={cn(
+          "absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary transition-all",
+          active ? "opacity-100" : "opacity-0 group-hover:opacity-30",
+        )}
+      />
       <Icon className="h-4.5 w-4.5 shrink-0" size={18} />
       <span className="truncate">{label}</span>
     </Link>
