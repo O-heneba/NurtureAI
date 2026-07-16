@@ -41,12 +41,18 @@ function NavItem({ to, label, icon: Icon, active, onClick }: {
       to={to}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
         active
-          ? "bg-primary/10 text-primary"
+          ? "bg-primary/10 text-primary shadow-sm"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",
       )}
     >
+      <span
+        className={cn(
+          "absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary transition-all",
+          active ? "opacity-100" : "opacity-0 group-hover:opacity-30",
+        )}
+      />
       <Icon className="h-4.5 w-4.5 shrink-0" size={18} />
       <span className="truncate">{label}</span>
     </Link>
@@ -198,13 +204,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Page content */}
-        <main className="pb-24 lg:pb-8 px-4 sm:px-6 py-6 max-w-7xl mx-auto w-full">
+        <main
+          key={pathname}
+          className="pb-24 lg:pb-10 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto w-full animate-page-in"
+        >
           {children}
         </main>
       </div>
 
       {/* Bottom nav (mobile) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="grid grid-cols-5">
           {bottomNav.map((item) => {
             const active = pathname === item.to;
@@ -214,10 +223,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium",
-                  active ? "text-primary" : "text-muted-foreground",
+                  "relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-primary" />
+                )}
                 <Icon className="h-5 w-5" />
                 <span className="truncate max-w-full px-1">{item.label}</span>
               </Link>
