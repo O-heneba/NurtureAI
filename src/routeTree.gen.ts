@@ -23,6 +23,7 @@ import { Route as ChildHealthRouteImport } from './routes/child-health'
 import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as AssessmentsRouteImport } from './routes/assessments'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RegisterPersonRouteImport } from './routes/register.person'
 import { Route as RegisterHouseholdRouteImport } from './routes/register.household'
 import { Route as PregnancyIdRouteImport } from './routes/pregnancy.$id'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
@@ -100,6 +101,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterPersonRoute = RegisterPersonRouteImport.update({
+  id: '/register/person',
+  path: '/register/person',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterHouseholdRoute = RegisterHouseholdRouteImport.update({
   id: '/register/household',
   path: '/register/household',
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/person/$id': typeof PersonIdRoute
   '/pregnancy/$id': typeof PregnancyIdRoute
   '/register/household': typeof RegisterHouseholdRoute
+  '/register/person': typeof RegisterPersonRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/person/$id': typeof PersonIdRoute
   '/pregnancy/$id': typeof PregnancyIdRoute
   '/register/household': typeof RegisterHouseholdRoute
+  '/register/person': typeof RegisterPersonRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/person/$id': typeof PersonIdRoute
   '/pregnancy/$id': typeof PregnancyIdRoute
   '/register/household': typeof RegisterHouseholdRoute
+  '/register/person': typeof RegisterPersonRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/person/$id'
     | '/pregnancy/$id'
     | '/register/household'
+    | '/register/person'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/person/$id'
     | '/pregnancy/$id'
     | '/register/household'
+    | '/register/person'
   id:
     | '__root__'
     | '/'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/person/$id'
     | '/pregnancy/$id'
     | '/register/household'
+    | '/register/person'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -288,6 +300,7 @@ export interface RootRouteChildren {
   PersonIdRoute: typeof PersonIdRoute
   PregnancyIdRoute: typeof PregnancyIdRoute
   RegisterHouseholdRoute: typeof RegisterHouseholdRoute
+  RegisterPersonRoute: typeof RegisterPersonRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -390,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register/person': {
+      id: '/register/person'
+      path: '/register/person'
+      fullPath: '/register/person'
+      preLoaderRoute: typeof RegisterPersonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register/household': {
       id: '/register/household'
       path: '/register/household'
@@ -456,6 +476,7 @@ const rootRouteChildren: RootRouteChildren = {
   PersonIdRoute: PersonIdRoute,
   PregnancyIdRoute: PregnancyIdRoute,
   RegisterHouseholdRoute: RegisterHouseholdRoute,
+  RegisterPersonRoute: RegisterPersonRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
