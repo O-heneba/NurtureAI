@@ -26,6 +26,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as RegisterPregnancyRouteImport } from './routes/register.pregnancy'
 import { Route as RegisterPersonRouteImport } from './routes/register.person'
 import { Route as RegisterHouseholdRouteImport } from './routes/register.household'
+import { Route as RegisterChildRouteImport } from './routes/register.child'
 import { Route as PregnancyIdRouteImport } from './routes/pregnancy.$id'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as HouseholdIdRouteImport } from './routes/household.$id'
@@ -117,6 +118,11 @@ const RegisterHouseholdRoute = RegisterHouseholdRouteImport.update({
   path: '/register/household',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterChildRoute = RegisterChildRouteImport.update({
+  id: '/register/child',
+  path: '/register/child',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PregnancyIdRoute = PregnancyIdRouteImport.update({
   id: '/pregnancy/$id',
   path: '/pregnancy/$id',
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/household/$id': typeof HouseholdIdRoute
   '/person/$id': typeof PersonIdRoute
   '/pregnancy/$id': typeof PregnancyIdRoute
+  '/register/child': typeof RegisterChildRoute
   '/register/household': typeof RegisterHouseholdRoute
   '/register/person': typeof RegisterPersonRoute
   '/register/pregnancy': typeof RegisterPregnancyRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/household/$id': typeof HouseholdIdRoute
   '/person/$id': typeof PersonIdRoute
   '/pregnancy/$id': typeof PregnancyIdRoute
+  '/register/child': typeof RegisterChildRoute
   '/register/household': typeof RegisterHouseholdRoute
   '/register/person': typeof RegisterPersonRoute
   '/register/pregnancy': typeof RegisterPregnancyRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/household/$id': typeof HouseholdIdRoute
   '/person/$id': typeof PersonIdRoute
   '/pregnancy/$id': typeof PregnancyIdRoute
+  '/register/child': typeof RegisterChildRoute
   '/register/household': typeof RegisterHouseholdRoute
   '/register/person': typeof RegisterPersonRoute
   '/register/pregnancy': typeof RegisterPregnancyRoute
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/household/$id'
     | '/person/$id'
     | '/pregnancy/$id'
+    | '/register/child'
     | '/register/household'
     | '/register/person'
     | '/register/pregnancy'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/household/$id'
     | '/person/$id'
     | '/pregnancy/$id'
+    | '/register/child'
     | '/register/household'
     | '/register/person'
     | '/register/pregnancy'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/household/$id'
     | '/person/$id'
     | '/pregnancy/$id'
+    | '/register/child'
     | '/register/household'
     | '/register/person'
     | '/register/pregnancy'
@@ -311,6 +323,7 @@ export interface RootRouteChildren {
   HouseholdIdRoute: typeof HouseholdIdRoute
   PersonIdRoute: typeof PersonIdRoute
   PregnancyIdRoute: typeof PregnancyIdRoute
+  RegisterChildRoute: typeof RegisterChildRoute
   RegisterHouseholdRoute: typeof RegisterHouseholdRoute
   RegisterPersonRoute: typeof RegisterPersonRoute
   RegisterPregnancyRoute: typeof RegisterPregnancyRoute
@@ -437,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterHouseholdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register/child': {
+      id: '/register/child'
+      path: '/register/child'
+      fullPath: '/register/child'
+      preLoaderRoute: typeof RegisterChildRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pregnancy/$id': {
       id: '/pregnancy/$id'
       path: '/pregnancy/$id'
@@ -495,6 +515,7 @@ const rootRouteChildren: RootRouteChildren = {
   HouseholdIdRoute: HouseholdIdRoute,
   PersonIdRoute: PersonIdRoute,
   PregnancyIdRoute: PregnancyIdRoute,
+  RegisterChildRoute: RegisterChildRoute,
   RegisterHouseholdRoute: RegisterHouseholdRoute,
   RegisterPersonRoute: RegisterPersonRoute,
   RegisterPregnancyRoute: RegisterPregnancyRoute,
