@@ -43,7 +43,7 @@ function PersonProfile() {
 
       <Card className="rounded-xl mb-4">
         <CardContent className="p-5 grid sm:grid-cols-[auto_1fr] gap-5 items-start">
-          <Avatar className="h-16 w-16"><AvatarFallback className="bg-primary text-primary-foreground text-lg font-bold">{p.name.split(" ").map((s) => s[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
+          <Avatar className="h-16 w-16"><AvatarFallback className="bg-primary text-primary-foreground text-lg font-bold">{p.name.split(" ").map((s: string) => s[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
           <div className="grid sm:grid-cols-3 gap-4 text-sm w-full">
             <div><div className="text-xs text-muted-foreground">Date of birth</div><div className="font-medium">{p.dob}</div></div>
             <div><div className="text-xs text-muted-foreground">Relationship</div><div className="font-medium">{p.relationship}</div></div>

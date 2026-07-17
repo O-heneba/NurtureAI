@@ -86,7 +86,7 @@ function HouseholdDetail() {
             {members.length === 0 && <div className="p-6"><EmptyState title="No members yet" description="Register the first person in this household." action={<Link to="/register/person"><Button>Register person</Button></Link>} /></div>}
             {members.map((p) => (
               <Link key={p.id} to="/person/$id" params={{ id: p.id }} className="flex items-center gap-3 p-4 hover:bg-accent/40">
-                <Avatar className="h-10 w-10"><AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{p.name.split(" ").map((s) => s[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
+                <Avatar className="h-10 w-10"><AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{p.name.split(" ").map((s: string) => s[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold truncate">{p.name}</div>
                   <div className="text-xs text-muted-foreground truncate">{p.age}y · {p.gender === "F" ? "Female" : "Male"} · {p.relationship}</div>
