@@ -226,10 +226,10 @@
 }
 @utility hover-lift {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-@utility hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 4px 8px -2px color-mix(in oklab, var(--color-foreground) 6%, transparent),
-    0 12px 32px -8px color-mix(in oklab, var(--color-primary) 15%, transparent);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 4px 8px -2px color-mix(in oklab, var(--color-foreground) 6%, transparent),
+      0 12px 32px -8px color-mix(in oklab, var(--color-primary) 15%, transparent);
+  }
 }
