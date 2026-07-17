@@ -18,7 +18,7 @@ function Maternal() {
       <PageHeader
         title="Maternal Care"
         description="Pregnancy registrations and ANC follow-up"
-        actions={<Button className="rounded-xl"><Plus className="mr-1 h-4 w-4" /> Register pregnancy</Button>}
+        actions={<Link to="/register/pregnancy"><Button className="rounded-xl"><Plus className="mr-1 h-4 w-4" /> Register pregnancy</Button></Link>}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
