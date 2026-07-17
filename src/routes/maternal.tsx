@@ -33,7 +33,7 @@ function Maternal() {
           const gwk = parseInt(p.gestation);
           const pct = Math.round((gwk / 40) * 100);
           return (
-            <Card key={p.id} className="rounded-xl">
+            <Link key={p.id} to="/pregnancy/$id" params={{ id: p.id }} className="contents"><Card className="rounded-xl card-elevated hover-lift cursor-pointer">
               <CardHeader className="flex-row items-start justify-between pb-3">
                 <div>
                   <CardTitle className="text-base">{p.mother}</CardTitle>
