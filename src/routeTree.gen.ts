@@ -23,6 +23,7 @@ import { Route as ChildHealthRouteImport } from './routes/child-health'
 import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as AssessmentsRouteImport } from './routes/assessments'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HouseholdIdRouteImport } from './routes/household.$id'
 import { Route as CommunityIdRouteImport } from './routes/community.$id'
 
 const WelcomeRoute = WelcomeRouteImport.update({
@@ -95,6 +96,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HouseholdIdRoute = HouseholdIdRouteImport.update({
+  id: '/household/$id',
+  path: '/household/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CommunityIdRoute = CommunityIdRouteImport.update({
   id: '/community/$id',
   path: '/community/$id',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
   '/community/$id': typeof CommunityIdRoute
+  '/household/$id': typeof HouseholdIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
   '/community/$id': typeof CommunityIdRoute
+  '/household/$id': typeof HouseholdIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
   '/community/$id': typeof CommunityIdRoute
+  '/household/$id': typeof HouseholdIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/welcome'
     | '/community/$id'
+    | '/household/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/welcome'
     | '/community/$id'
+    | '/household/$id'
   id:
     | '__root__'
     | '/'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/welcome'
     | '/community/$id'
+    | '/household/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -223,6 +235,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   WelcomeRoute: typeof WelcomeRoute
   CommunityIdRoute: typeof CommunityIdRoute
+  HouseholdIdRoute: typeof HouseholdIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -325,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/household/$id': {
+      id: '/household/$id'
+      path: '/household/$id'
+      fullPath: '/household/$id'
+      preLoaderRoute: typeof HouseholdIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/community/$id': {
       id: '/community/$id'
       path: '/community/$id'
@@ -351,6 +371,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   WelcomeRoute: WelcomeRoute,
   CommunityIdRoute: CommunityIdRoute,
+  HouseholdIdRoute: HouseholdIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
