@@ -27,6 +27,7 @@ import { Route as PregnancyIdRouteImport } from './routes/pregnancy.$id'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as HouseholdIdRouteImport } from './routes/household.$id'
 import { Route as CommunityIdRouteImport } from './routes/community.$id'
+import { Route as ChildIdRouteImport } from './routes/child.$id'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -118,6 +119,11 @@ const CommunityIdRoute = CommunityIdRouteImport.update({
   path: '/community/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChildIdRoute = ChildIdRouteImport.update({
+  id: '/child/$id',
+  path: '/child/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
+  '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
   '/household/$id': typeof HouseholdIdRoute
   '/person/$id': typeof PersonIdRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
+  '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
   '/household/$id': typeof HouseholdIdRoute
   '/person/$id': typeof PersonIdRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
+  '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
   '/household/$id': typeof HouseholdIdRoute
   '/person/$id': typeof PersonIdRoute
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/welcome'
+    | '/child/$id'
     | '/community/$id'
     | '/household/$id'
     | '/person/$id'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/welcome'
+    | '/child/$id'
     | '/community/$id'
     | '/household/$id'
     | '/person/$id'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/welcome'
+    | '/child/$id'
     | '/community/$id'
     | '/household/$id'
     | '/person/$id'
@@ -258,6 +270,7 @@ export interface RootRouteChildren {
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   WelcomeRoute: typeof WelcomeRoute
+  ChildIdRoute: typeof ChildIdRoute
   CommunityIdRoute: typeof CommunityIdRoute
   HouseholdIdRoute: typeof HouseholdIdRoute
   PersonIdRoute: typeof PersonIdRoute
@@ -392,6 +405,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommunityIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/child/$id': {
+      id: '/child/$id'
+      path: '/child/$id'
+      fullPath: '/child/$id'
+      preLoaderRoute: typeof ChildIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -410,6 +430,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   WelcomeRoute: WelcomeRoute,
+  ChildIdRoute: ChildIdRoute,
   CommunityIdRoute: CommunityIdRoute,
   HouseholdIdRoute: HouseholdIdRoute,
   PersonIdRoute: PersonIdRoute,
