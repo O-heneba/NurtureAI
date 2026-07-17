@@ -33,7 +33,7 @@ function ChildHealth() {
       <PageHeader
         title="Child Health"
         description="Growth monitoring & immunization tracking for children under 5"
-        actions={<Button className="rounded-xl"><Plus className="mr-1 h-4 w-4" /> Register child</Button>}
+        actions={<Link to="/register/child"><Button className="rounded-xl"><Plus className="mr-1 h-4 w-4" /> Register child</Button></Link>}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
