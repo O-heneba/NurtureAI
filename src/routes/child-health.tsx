@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader, StatCard } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +33,7 @@ function ChildHealth() {
       <PageHeader
         title="Child Health"
         description="Growth monitoring & immunization tracking for children under 5"
-        actions={<Button className="rounded-xl"><Plus className="mr-1 h-4 w-4" /> Register child</Button>}
+        actions={<Link to="/register/child"><Button className="rounded-xl"><Plus className="mr-1 h-4 w-4" /> Register child</Button></Link>}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
@@ -94,7 +94,7 @@ function ChildHealth() {
         <CardContent className="p-0">
           <div className="divide-y">
             {children.map((c) => (
-              <div key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 sm:flex sm:items-center hover:bg-accent/40">
+              <Link key={c.id} to="/child/$id" params={{ id: c.id }} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 sm:flex sm:items-center hover:bg-accent/40 transition-colors">
                 <div className="min-w-0 sm:flex-1">
                   <div className="font-semibold truncate">{c.name}</div>
                   <div className="text-xs text-muted-foreground truncate">{c.age} · {c.sex === "F" ? "Female" : "Male"} · {c.community}</div>
@@ -104,7 +104,7 @@ function ChildHealth() {
                 </div>
                 <div className="hidden md:block text-xs text-muted-foreground shrink-0 w-32 truncate">{c.immunization}</div>
                 <Badge variant="outline" className={cn("shrink-0", nutritionColor(c.nutrition))}>{c.nutrition}</Badge>
-              </div>
+              </Link>
             ))}
           </div>
         </CardContent>

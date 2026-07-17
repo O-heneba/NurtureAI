@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader, RiskBadge, StatCard } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ function Maternal() {
       <PageHeader
         title="Maternal Care"
         description="Pregnancy registrations and ANC follow-up"
-        actions={<Button className="rounded-xl"><Plus className="mr-1 h-4 w-4" /> Register pregnancy</Button>}
+        actions={<Link to="/register/pregnancy"><Button className="rounded-xl"><Plus className="mr-1 h-4 w-4" /> Register pregnancy</Button></Link>}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
@@ -33,7 +33,7 @@ function Maternal() {
           const gwk = parseInt(p.gestation);
           const pct = Math.round((gwk / 40) * 100);
           return (
-            <Card key={p.id} className="rounded-xl">
+            <Link key={p.id} to="/pregnancy/$id" params={{ id: p.id }} className="contents"><Card className="rounded-xl card-elevated hover-lift cursor-pointer">
               <CardHeader className="flex-row items-start justify-between pb-3">
                 <div>
                   <CardTitle className="text-base">{p.mother}</CardTitle>
@@ -60,7 +60,7 @@ function Maternal() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card></Link>
           );
         })}
       </div>
