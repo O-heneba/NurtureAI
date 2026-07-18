@@ -1,9 +1,9 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, MapPin, Home, Users, HeartPulse, Baby, ClipboardCheck,
   Sparkles, Send, Apple, BarChart3, Settings, Bell, LogOut, Menu, Search, Wifi, WifiOff, User,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,8 +13,9 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { currentUser } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
