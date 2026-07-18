@@ -143,7 +143,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       {/* Sidebar (desktop) */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 border-r">
-        <SidebarInner pathname={pathname} />
+        <SidebarInner pathname={pathname} name={displayName} subtitle={role} initials={initials} />
       </aside>
 
       {/* Main column */}
@@ -159,13 +159,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-72">
-                <SidebarInner pathname={pathname} onNav={() => setMobileOpen(false)} />
+                <SidebarInner pathname={pathname} onNav={() => setMobileOpen(false)} name={displayName} subtitle={role} initials={initials} />
               </SheetContent>
             </Sheet>
 
             <div className="hidden md:block min-w-0">
               <h1 className="text-lg font-semibold truncate">{current?.label ?? "NurtureAI"}</h1>
-              <p className="text-xs text-muted-foreground truncate">{currentUser.facility} · {currentUser.district}</p>
+              <p className="text-xs text-muted-foreground truncate">{facility} · {role}</p>
             </div>
 
             <div className="relative ml-auto hidden sm:block max-w-xs w-full">
@@ -214,25 +214,25 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <Button variant="ghost" className="h-10 gap-2 px-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {currentUser.avatar}
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden md:block text-left leading-tight">
-                    <div className="text-sm font-medium">{currentUser.name.split(" ")[0]}</div>
-                    <div className="text-[11px] text-muted-foreground">{currentUser.role.split(" ")[0]}</div>
+                    <div className="text-sm font-medium">{displayName.split(" ")[0]}</div>
+                    <div className="text-[11px] text-muted-foreground">{role.split(" ")[0]}</div>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
-                  <div className="font-semibold">{currentUser.name}</div>
-                  <div className="text-xs font-normal text-muted-foreground">{currentUser.email}</div>
+                  <div className="font-semibold">{displayName}</div>
+                  <div className="text-xs font-normal text-muted-foreground">{displayEmail}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild><Link to="/settings"><User className="mr-2 h-4 w-4" />Profile</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link></DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild><Link to="/login" className="text-destructive"><LogOut className="mr-2 h-4 w-4" />Sign out</Link></DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleSignOut} className="text-destructive"><LogOut className="mr-2 h-4 w-4" />Sign out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
