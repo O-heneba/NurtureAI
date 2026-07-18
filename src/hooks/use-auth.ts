@@ -25,10 +25,21 @@ export function useAuth(): AuthState & { signOut: () => Promise<void> } {
     let mounted = true;
 
     async function loadExtras(userId: string) {
-      const [{ data: roleRows }, { data: prof }] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", userId),
-        supabase.from("profiles").select("full_name, facility, phone, avatar_url").eq("id", userId).maybeSingle(),
+      const client = supabase as unknown as {
+        from: (t: string) => {
+          select: (c: string) => {
+            eq: (k: string, v: string) => Promise<{ data: unknown }> & {
+              maybeSingle: () => Promise<{ data: unknown }>;
+            };
+          };
+        };
+      };
+      const [{ data: roleRowsRaw }, { data: profRaw }] = await Promise.all([
+        client.from("user_roles").select("role").eq("user_id", userId),
+        client.from("profiles").select("full_name, facility, phone, avatar_url").eq("id", userId).maybeSingle(),
       ]);
+      const roleRows = roleRowsRaw as Array<{ role: Role }> | null;
+      const prof = profRaw as { full_name: string | null; facility: string | null; phone: string | null; avatar_url: string | null } | null;
       if (!mounted) return;
       setState((s) => ({
         ...s,
