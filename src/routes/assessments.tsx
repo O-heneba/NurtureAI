@@ -112,8 +112,9 @@ function Assessments() {
                 Next <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={() => setSubmitted(true)} className="bg-primary">
-                <Sparkles className="mr-1.5 h-4 w-4" /> Submit for AI analysis
+              <Button onClick={submit} disabled={loading} className="bg-primary">
+                {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
+                {loading ? "Analyzing…" : "Submit for AI analysis"}
               </Button>
             )}
           </div>
