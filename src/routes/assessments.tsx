@@ -13,10 +13,13 @@ import {
 } from "@/components/ui/select";
 import {
   ChevronLeft, ChevronRight, Sparkles, AlertTriangle, ShieldCheck,
-  Send, Apple, Home, Info, CheckCircle2,
+  Send, Apple, Home, Info, CheckCircle2, Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useServerFn } from "@tanstack/react-start";
+import { assessRisk } from "@/lib/ai.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/assessments")({
   component: Assessments,
@@ -27,11 +30,48 @@ const steps = [
   "Nutrition", "Risk factors", "Summary",
 ];
 
+type AIResultShape = {
+  risk_level?: string;
+  risk_score?: number;
+  summary?: string;
+  contributing_factors?: string[];
+  recommended_actions?: string[];
+  referral?: { recommended?: boolean; urgency?: string; facility_type?: string; reason?: string };
+  nutrition_advice?: string;
+  home_care?: string;
+  disclaimer?: string;
+};
+
 function Assessments() {
   const [step, setStep] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState<AIResultShape | null>(null);
+  const [loading, setLoading] = useState(false);
+  const callAssess = useServerFn(assessRisk);
 
-  if (submitted) return <AIResult onNew={() => { setSubmitted(false); setStep(0); }} />;
+  async function submit() {
+    setLoading(true);
+    try {
+      const result = await callAssess({
+        data: {
+          assessmentType: "anc",
+          patient: { name: "Ama Nyarko", age: 24, sex: "female", community: "Atonsu", visitType: "anc" },
+          vitals: { temperature_c: 37.2, bp: "142/92", pulse: 92, spo2: 98, weight_kg: 64, height_cm: 162 },
+          symptoms: ["Headache", "Swelling of feet", "Blurred vision"],
+          pregnancy: { gestation_weeks: 32, gravida_para: "G2 P1", anc_visits: 3, edd: "2026-01-04" },
+          nutrition: ["Access to clean water"],
+          riskFactors: ["Age <18 or >35", "Long distance to facility"],
+          notes: "Reports headaches and mild swelling for 4 days.",
+        },
+      });
+      setSubmitted(result as AIResultShape);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "AI analysis failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (submitted) return <AIResult result={submitted} onNew={() => { setSubmitted(null); setStep(0); }} />;
 
   const progress = ((step + 1) / steps.length) * 100;
 
