@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as PeopleRouteImport } from './routes/people'
@@ -18,6 +20,7 @@ import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as MaternalRouteImport } from './routes/maternal'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HouseholdsRouteImport } from './routes/households'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as CommunitiesRouteImport } from './routes/communities'
 import { Route as ChildHealthRouteImport } from './routes/child-health'
 import { Route as AssistantRouteImport } from './routes/assistant'
@@ -38,9 +41,19 @@ const WelcomeRoute = WelcomeRouteImport.update({
   path: '/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportsRoute = ReportsRouteImport.update({
@@ -76,6 +89,11 @@ const LoginRoute = LoginRouteImport.update({
 const HouseholdsRoute = HouseholdsRouteImport.update({
   id: '/households',
   path: '/households',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommunitiesRoute = CommunitiesRouteImport.update({
@@ -155,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/assistant': typeof AssistantRoute
   '/child-health': typeof ChildHealthRoute
   '/communities': typeof CommunitiesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
   '/maternal': typeof MaternalRoute
@@ -162,7 +181,9 @@ export interface FileRoutesByFullPath {
   '/people': typeof PeopleRoute
   '/referrals': typeof ReferralsRoute
   '/reports': typeof ReportsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
+  '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
@@ -180,6 +201,7 @@ export interface FileRoutesByTo {
   '/assistant': typeof AssistantRoute
   '/child-health': typeof ChildHealthRoute
   '/communities': typeof CommunitiesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
   '/maternal': typeof MaternalRoute
@@ -187,7 +209,9 @@ export interface FileRoutesByTo {
   '/people': typeof PeopleRoute
   '/referrals': typeof ReferralsRoute
   '/reports': typeof ReportsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
+  '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
@@ -206,6 +230,7 @@ export interface FileRoutesById {
   '/assistant': typeof AssistantRoute
   '/child-health': typeof ChildHealthRoute
   '/communities': typeof CommunitiesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
   '/maternal': typeof MaternalRoute
@@ -213,7 +238,9 @@ export interface FileRoutesById {
   '/people': typeof PeopleRoute
   '/referrals': typeof ReferralsRoute
   '/reports': typeof ReportsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
+  '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
@@ -233,6 +260,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/child-health'
     | '/communities'
+    | '/forgot-password'
     | '/households'
     | '/login'
     | '/maternal'
@@ -240,7 +268,9 @@ export interface FileRouteTypes {
     | '/people'
     | '/referrals'
     | '/reports'
+    | '/reset-password'
     | '/settings'
+    | '/signup'
     | '/welcome'
     | '/child/$id'
     | '/community/$id'
@@ -258,6 +288,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/child-health'
     | '/communities'
+    | '/forgot-password'
     | '/households'
     | '/login'
     | '/maternal'
@@ -265,7 +296,9 @@ export interface FileRouteTypes {
     | '/people'
     | '/referrals'
     | '/reports'
+    | '/reset-password'
     | '/settings'
+    | '/signup'
     | '/welcome'
     | '/child/$id'
     | '/community/$id'
@@ -283,6 +316,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/child-health'
     | '/communities'
+    | '/forgot-password'
     | '/households'
     | '/login'
     | '/maternal'
@@ -290,7 +324,9 @@ export interface FileRouteTypes {
     | '/people'
     | '/referrals'
     | '/reports'
+    | '/reset-password'
     | '/settings'
+    | '/signup'
     | '/welcome'
     | '/child/$id'
     | '/community/$id'
@@ -309,6 +345,7 @@ export interface RootRouteChildren {
   AssistantRoute: typeof AssistantRoute
   ChildHealthRoute: typeof ChildHealthRoute
   CommunitiesRoute: typeof CommunitiesRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   HouseholdsRoute: typeof HouseholdsRoute
   LoginRoute: typeof LoginRoute
   MaternalRoute: typeof MaternalRoute
@@ -316,7 +353,9 @@ export interface RootRouteChildren {
   PeopleRoute: typeof PeopleRoute
   ReferralsRoute: typeof ReferralsRoute
   ReportsRoute: typeof ReportsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
+  SignupRoute: typeof SignupRoute
   WelcomeRoute: typeof WelcomeRoute
   ChildIdRoute: typeof ChildIdRoute
   CommunityIdRoute: typeof CommunityIdRoute
@@ -338,11 +377,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reports': {
@@ -392,6 +445,13 @@ declare module '@tanstack/react-router' {
       path: '/households'
       fullPath: '/households'
       preLoaderRoute: typeof HouseholdsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/communities': {
@@ -501,6 +561,7 @@ const rootRouteChildren: RootRouteChildren = {
   AssistantRoute: AssistantRoute,
   ChildHealthRoute: ChildHealthRoute,
   CommunitiesRoute: CommunitiesRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   HouseholdsRoute: HouseholdsRoute,
   LoginRoute: LoginRoute,
   MaternalRoute: MaternalRoute,
@@ -508,7 +569,9 @@ const rootRouteChildren: RootRouteChildren = {
   PeopleRoute: PeopleRoute,
   ReferralsRoute: ReferralsRoute,
   ReportsRoute: ReportsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
+  SignupRoute: SignupRoute,
   WelcomeRoute: WelcomeRoute,
   ChildIdRoute: ChildIdRoute,
   CommunityIdRoute: CommunityIdRoute,

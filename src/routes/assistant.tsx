@@ -3,12 +3,15 @@ import { AppLayout } from "@/components/app-layout";
 import { PageHeader } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, HeartPulse, Baby, Milk, Utensils, Send } from "lucide-react";
+import { Sparkles, HeartPulse, Baby, Milk, Utensils, Send, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
-import { nutritionMessages, suggestedQuestions } from "@/lib/demo-data";
+import { suggestedQuestions } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
+import { useServerFn } from "@tanstack/react-start";
+import { nutritionChat } from "@/lib/ai.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/assistant")({
   component: Assistant,
@@ -21,42 +24,52 @@ const topics = [
   { icon: Utensils, label: "Meal ideas", tone: "bg-success/10 text-success" },
 ];
 
-function Assistant() {
-  const [messages, setMessages] = useState(nutritionMessages);
-  const [input, setInput] = useState("");
+type Msg = { role: "user" | "assistant"; content: string };
 
-  function send(text: string) {
-    if (!text.trim()) return;
-    const userMsg = { role: "user", text };
-    setMessages((m) => [...m, userMsg]);
+const initialMessages: Msg[] = [
+  {
+    role: "assistant",
+    content:
+      "Akwaaba! I'm your NurtureAI Nutrition Assistant. Ask me about pregnancy nutrition, breastfeeding, child feeding, or common deficiencies — I focus on foods available in Ghana.",
+  },
+];
+
+function Assistant() {
+  const [messages, setMessages] = useState<Msg[]>(initialMessages);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const callNutrition = useServerFn(nutritionChat);
+
+  async function send(text: string) {
+    if (!text.trim() || loading) return;
+    const next: Msg[] = [...messages, { role: "user", content: text }];
+    setMessages(next);
     setInput("");
-    setTimeout(() => {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          text: "Great question. Here's guidance drawn from Ghana Health Service protocols — please still confirm with local clinical judgment. Aim for varied local foods across all six food groups: staples (kenkey, banku, rice), legumes (beans, groundnut), animal protein (fish, eggs, meat), vegetables (kontomire, garden eggs), fruits (mango, orange, pawpaw), and healthy fats. Encourage 3 balanced meals and 2 nutrient-dense snacks daily.",
-        },
-      ]);
-    }, 700);
+    setLoading(true);
+    try {
+      const res = await callNutrition({ data: { messages: next } });
+      setMessages([...next, { role: "assistant", content: res.reply }]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "AI request failed";
+      toast.error(msg);
+      setMessages(next);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <AppLayout>
-      <PageHeader
-        title="AI Assistant"
-        description="Ask NurtureAI for nutrition and health guidance"
-      />
+      <PageHeader title="AI Assistant" description="Ask NurtureAI for nutrition and health guidance" />
 
       <div className="grid lg:grid-cols-[280px_1fr] gap-4">
-        {/* Left rail */}
         <div className="space-y-4">
           <Card className="rounded-xl">
             <CardContent className="p-4">
               <div className="text-xs font-semibold text-muted-foreground uppercase mb-3">Topics</div>
               <div className="space-y-2">
                 {topics.map((t) => (
-                  <button key={t.label} className="flex items-center gap-2 w-full rounded-lg p-2 hover:bg-accent/50 text-sm">
+                  <button key={t.label} onClick={() => send(`Give me guidance on ${t.label.toLowerCase()}.`)} className="flex items-center gap-2 w-full rounded-lg p-2 hover:bg-accent/50 text-sm text-left">
                     <div className={cn("grid h-8 w-8 place-items-center rounded-lg", t.tone)}>
                       <t.icon className="h-4 w-4" />
                     </div>
@@ -66,20 +79,8 @@ function Assistant() {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="p-4">
-              <div className="text-xs font-semibold text-muted-foreground uppercase mb-3">History</div>
-              <div className="space-y-1 text-sm">
-                {["Iron-rich meals for anemia", "Breastfeeding tips", "Feeding a 7-month-old"].map((h) => (
-                  <button key={h} className="w-full text-left truncate rounded-md p-2 hover:bg-accent/50">{h}</button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Chat */}
         <Card className="rounded-xl flex flex-col min-h-[70vh]">
           <div className="p-4 border-b flex items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -103,23 +104,33 @@ function Assistant() {
                   "rounded-2xl px-4 py-2.5 text-sm max-w-[80%] whitespace-pre-line",
                   m.role === "user" ? "bg-primary text-primary-foreground rounded-tr-sm" : "bg-accent rounded-tl-sm",
                 )}>
-                  {m.text}
+                  {m.content}
                 </div>
               </div>
             ))}
+            {loading && (
+              <div className="flex gap-3">
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs"><Sparkles className="h-4 w-4" /></AvatarFallback>
+                </Avatar>
+                <div className="rounded-2xl px-4 py-2.5 text-sm bg-accent rounded-tl-sm inline-flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Thinking…
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t p-4">
             <div className="flex flex-wrap gap-2 mb-3">
               {suggestedQuestions.map((q) => (
-                <button key={q} onClick={() => send(q)} className="text-xs rounded-full border px-3 py-1.5 hover:bg-accent">
+                <button key={q} onClick={() => send(q)} disabled={loading} className="text-xs rounded-full border px-3 py-1.5 hover:bg-accent disabled:opacity-50">
                   {q}
                 </button>
               ))}
             </div>
             <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex gap-2">
-              <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about nutrition, feeding, or health…" />
-              <Button type="submit" className="rounded-xl"><Send className="h-4 w-4" /></Button>
+              <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about nutrition, feeding, or health…" disabled={loading} />
+              <Button type="submit" className="rounded-xl" disabled={loading}><Send className="h-4 w-4" /></Button>
             </form>
           </div>
         </Card>
