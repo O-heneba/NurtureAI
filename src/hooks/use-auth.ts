@@ -43,8 +43,8 @@ export function useAuth(): AuthState & { signOut: () => Promise<void> } {
       if (!mounted) return;
       setState((s) => ({
         ...s,
-        roles: (roleRows ?? []).map((r: { role: Role }) => r.role),
-        profile: prof ?? null,
+        roles: (roleRows ?? []).map((r) => r.role),
+        profile: prof,
       }));
     }
 
