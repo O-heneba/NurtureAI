@@ -246,29 +246,40 @@ function Summary() {
   );
 }
 
-function AIResult({ onNew }: { onNew: () => void }) {
+function AIResult({ result, onNew }: { result: AIResultShape; onNew: () => void }) {
+  const level = (result.risk_level ?? "moderate").toLowerCase();
+  const score = typeof result.risk_score === "number" ? Math.max(0, Math.min(100, result.risk_score)) : 50;
+  const tone =
+    level === "critical" || level === "high"
+      ? { grad: "from-destructive/10 to-warning/10", ring: "border-destructive/20", chip: "text-destructive", pill: "bg-destructive text-destructive-foreground", label: "High risk detected" }
+      : level === "moderate"
+      ? { grad: "from-warning/10 to-info/10", ring: "border-warning/20", chip: "text-warning", pill: "bg-warning text-warning-foreground", label: "Moderate risk" }
+      : { grad: "from-success/10 to-primary/10", ring: "border-success/20", chip: "text-success", pill: "bg-success text-success-foreground", label: "Low risk" };
+
+  const referral = result.referral;
+  const showReferral = referral?.recommended;
+
   return (
     <AppLayout>
       <PageHeader
         title="AI Assessment Result"
-        description="Ama Nyarko · Atonsu · 14 Nov 2025"
+        description="AI-assisted clinical review"
         actions={<Button variant="outline" onClick={onNew}>New assessment</Button>}
       />
 
-      <div className="rounded-2xl bg-gradient-to-br from-destructive/10 to-warning/10 border border-destructive/20 p-6 mb-6">
+      <div className={cn("rounded-2xl bg-gradient-to-br border p-6 mb-6", tone.grad, tone.ring)}>
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:justify-between">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-destructive text-xs font-semibold uppercase tracking-wide">
-              <AlertTriangle className="h-4 w-4" /> High risk detected
+            <div className={cn("flex items-center gap-2 text-xs font-semibold uppercase tracking-wide", tone.chip)}>
+              <AlertTriangle className="h-4 w-4" /> {tone.label}
             </div>
-            <h2 className="mt-2 text-2xl font-bold">Risk score 82 / 100</h2>
-            <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
-              Signs consistent with early preeclampsia. Immediate referral to a higher-level facility is
-              recommended for confirmatory workup and monitoring.
-            </p>
+            <h2 className="mt-2 text-2xl font-bold">Risk score {score} / 100</h2>
+            {result.summary && (
+              <p className="mt-1 text-sm text-muted-foreground max-w-2xl">{result.summary}</p>
+            )}
           </div>
-          <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-destructive text-destructive-foreground text-2xl font-bold">
-            82
+          <div className={cn("grid h-20 w-20 shrink-0 place-items-center rounded-full text-2xl font-bold", tone.pill)}>
+            {score}
           </div>
         </div>
       </div>
@@ -277,73 +288,65 @@ function AIResult({ onNew }: { onNew: () => void }) {
         <Card className="rounded-xl">
           <CardContent className="p-5">
             <div className="flex items-center gap-2 font-semibold mb-3"><Sparkles className="h-4 w-4 text-primary" /> Clinical summary</div>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              32-week primigravida presenting with BP 142/92 mmHg, headache, blurred vision and pedal
-              oedema. Combination of hypertension and neurological symptoms in the third trimester
-              raises strong suspicion of preeclampsia and warrants urgent obstetric review.
-            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{result.summary ?? "No summary returned."}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl">
           <CardContent className="p-5">
             <div className="flex items-center gap-2 font-semibold mb-3"><AlertTriangle className="h-4 w-4 text-warning" /> Contributing factors</div>
             <ul className="text-sm space-y-1.5 text-muted-foreground">
-              <li>• Elevated blood pressure (142/92)</li>
-              <li>• Reported headache and blurred vision</li>
-              <li>• Bilateral pedal oedema</li>
-              <li>• Distance to nearest referral facility (18 km)</li>
-              <li>• Only 3 ANC visits completed by 32 weeks</li>
+              {(result.contributing_factors ?? []).map((f, i) => <li key={i}>• {f}</li>)}
+              {(result.contributing_factors ?? []).length === 0 && <li>• None identified</li>}
             </ul>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4 mb-4">
-        <Card className="rounded-xl border-destructive/30 bg-destructive/5">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 font-semibold mb-3 text-destructive"><Send className="h-4 w-4" /> Referral recommended</div>
-            <p className="text-sm text-muted-foreground mb-3">Refer to Komfo Anokye Teaching Hospital — Obstetrics unit, priority: <span className="font-semibold text-destructive">Urgent</span>.</p>
-            <Button size="sm" variant="destructive" className="rounded-lg">Create referral</Button>
-          </CardContent>
-        </Card>
+        {showReferral && (
+          <Card className="rounded-xl border-destructive/30 bg-destructive/5">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 font-semibold mb-3 text-destructive"><Send className="h-4 w-4" /> Referral recommended</div>
+              <p className="text-sm text-muted-foreground mb-3">
+                {referral?.reason ?? "Refer to a higher-level facility."} {referral?.facility_type && <>Facility: <span className="font-medium text-foreground">{referral.facility_type}</span>.</>} Priority:{" "}
+                <span className="font-semibold text-destructive">{referral?.urgency ?? "urgent"}</span>.
+              </p>
+              <Button size="sm" variant="destructive" className="rounded-lg">Create referral</Button>
+            </CardContent>
+          </Card>
+        )}
         <Card className="rounded-xl">
           <CardContent className="p-5">
             <div className="flex items-center gap-2 font-semibold mb-3"><ShieldCheck className="h-4 w-4 text-primary" /> Recommended actions</div>
             <ul className="text-sm space-y-1.5 text-muted-foreground">
-              <li>• Recheck BP within 4 hours</li>
-              <li>• Test urine for proteinuria</li>
-              <li>• Advise left-lateral rest position</li>
-              <li>• Escort patient to referral facility</li>
+              {(result.recommended_actions ?? []).map((a, i) => <li key={i}>• {a}</li>)}
+              {(result.recommended_actions ?? []).length === 0 && <li>• Continue routine care</li>}
             </ul>
           </CardContent>
         </Card>
-        <Card className="rounded-xl">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 font-semibold mb-3"><Apple className="h-4 w-4 text-success" /> Nutrition advice</div>
-            <p className="text-sm text-muted-foreground">
-              Reduce salt intake. Encourage iron-rich local foods: kontomire, dark leafy greens,
-              beans and small dried fish. Continue iron & folate supplementation.
-            </p>
-          </CardContent>
-        </Card>
+        {result.nutrition_advice && (
+          <Card className="rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 font-semibold mb-3"><Apple className="h-4 w-4 text-success" /> Nutrition advice</div>
+              <p className="text-sm text-muted-foreground">{result.nutrition_advice}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      <Card className="rounded-xl">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 font-semibold mb-3"><Home className="h-4 w-4 text-info" /> Home care & follow-up</div>
-          <p className="text-sm text-muted-foreground">
-            Family should monitor for worsening headache, epigastric pain, reduced foetal movement or
-            vaginal bleeding — return immediately if any occur. Schedule follow-up within 48 hours.
-          </p>
-        </CardContent>
-      </Card>
+      {result.home_care && (
+        <Card className="rounded-xl">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 font-semibold mb-3"><Home className="h-4 w-4 text-info" /> Home care & follow-up</div>
+            <p className="text-sm text-muted-foreground">{result.home_care}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mt-6 flex items-start gap-3 p-4 rounded-xl bg-accent/40 border text-xs text-muted-foreground">
         <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
         <div>
-          <strong>Medical disclaimer:</strong> This AI-generated assessment is a decision-support aid and
-          does not replace clinical judgment. Always follow Ghana Health Service protocols and refer
-          patients when in doubt.
+          <strong>Medical disclaimer:</strong> {result.disclaimer ?? "This AI-generated assessment is a decision-support aid and does not replace clinical judgment. Always follow Ghana Health Service protocols and refer patients when in doubt."}
         </div>
       </div>
     </AppLayout>
