@@ -60,7 +60,7 @@ function NavItem({ to, label, icon: Icon, active, onClick }: {
   );
 }
 
-function SidebarInner({ pathname, onNav }: { pathname: string; onNav?: () => void }) {
+function SidebarInner({ pathname, onNav, name, subtitle, initials }: { pathname: string; onNav?: () => void; name: string; subtitle: string; initials: string }) {
   return (
     <div className="flex h-full flex-col bg-sidebar">
       <div className="flex items-center gap-2 px-5 py-5 border-b">
@@ -86,12 +86,12 @@ function SidebarInner({ pathname, onNav }: { pathname: string; onNav?: () => voi
         <div className="flex items-center gap-3 rounded-xl bg-accent/50 p-3">
           <Avatar className="h-9 w-9">
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              {currentUser.avatar}
+              {initials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold">{currentUser.name}</div>
-            <div className="truncate text-[11px] text-muted-foreground">{currentUser.role}</div>
+            <div className="truncate text-sm font-semibold">{name}</div>
+            <div className="truncate text-[11px] text-muted-foreground">{subtitle}</div>
           </div>
         </div>
       </div>
@@ -99,11 +99,45 @@ function SidebarInner({ pathname, onNav }: { pathname: string; onNav?: () => voi
   );
 }
 
+function initialsFor(name: string) {
+  return name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "U";
+}
+
+function roleLabel(role: string) {
+  return role.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [online] = useState(true);
   const current = nav.find((n) => n.to === pathname);
+  const { user, profile, roles, loading, signOut } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/login" });
+  }, [loading, user, navigate]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-background">
+        <div className="text-sm text-muted-foreground">Loading…</div>
+      </div>
+    );
+  }
+
+  const displayName = profile?.full_name ?? user.email ?? "User";
+  const displayEmail = user.email ?? "";
+  const role = roles[0] ? roleLabel(roles[0]) : "CHPS Worker";
+  const facility = profile?.facility ?? "CHPS Facility";
+  const initials = initialsFor(displayName);
+
+  async function handleSignOut() {
+    await signOut();
+    toast.success("Signed out");
+    navigate({ to: "/login", replace: true });
+  }
 
   return (
     <div className="min-h-screen bg-background">
