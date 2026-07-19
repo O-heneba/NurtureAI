@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Baby, CheckCircle2, Save } from "lucide-react";
-import { useState } from "react";
+import { Baby, CheckCircle2, Loader2, Save } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { insertChild, insertPerson, listHouseholds, listPersons } from "@/lib/registrations";
 
 export const Route = createFileRoute("/register/child")({
   component: RegisterChild,
@@ -22,12 +23,57 @@ const immSchedule = ["BCG + OPV0", "Penta 1", "Penta 2", "Penta 3", "Measles 1",
 function RegisterChild() {
   const nav = useNavigate();
   const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [v, setV] = useState<Record<string, string>>({ nutrition: "Normal", bf: "Exclusive" });
+  const [ms, setMs] = useState<string[]>([]);
+  const [imm, setImm] = useState<string[]>([]);
+  const [households, setHouseholds] = useState<Array<{ id: string; head_name: string; house_no: string }>>([]);
+  const [mothers, setMothers] = useState<Array<{ id: string; full_name: string; sex: string | null }>>([]);
   const s = (k: string, val: string) => setV({ ...v, [k]: val });
 
-  function submit() {
+  useEffect(() => {
+    listHouseholds().then(setHouseholds).catch((e) => toast.error(e.message));
+    listPersons().then((p) => setMothers(p.filter((x) => x.sex !== "M"))).catch((e) => toast.error(e.message));
+  }, []);
+
+  function toggle(list: string[], setList: (v: string[]) => void, val: string) {
+    setList(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
+  }
+
+  async function submit() {
     if (!v.dob || !v.name) { toast.error("Child name and birth date are required"); return; }
-    setDone(true); toast.success("Child registered");
+    if (!v.household) { toast.error("Select a household"); return; }
+    setSaving(true);
+    try {
+      const person = await insertPerson({
+        household_id: v.household,
+        full_name: v.name,
+        sex: v.sex || undefined,
+        date_of_birth: v.dob,
+        notes: v.notes || undefined,
+      });
+      const growthNotes = [
+        v.cw && `Current weight: ${v.cw}kg`,
+        v.h && `Height: ${v.h}cm`,
+        `Nutrition: ${v.nutrition}`,
+        `Breastfeeding: ${v.bf}`,
+        v.imm && `Immunization: ${v.imm}`,
+        ms.length && `Milestones: ${ms.join(", ")}`,
+        v.notes && `Notes: ${v.notes}`,
+      ].filter(Boolean).join(" | ");
+      await insertChild({
+        person_id: person.id,
+        mother_person_id: v.mother || undefined,
+        birth_weight_kg: v.bw ? Number(v.bw) : undefined,
+        immunizations: imm,
+        growth_notes: growthNotes,
+      });
+      setDone(true); toast.success("Child registered");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (done) return (
@@ -38,7 +84,7 @@ function RegisterChild() {
         <p className="mt-2 text-sm text-muted-foreground">{v.name} has been added to the growth-monitoring register.</p>
         <div className="mt-6 flex justify-center gap-2">
           <Link to="/child-health"><Button variant="outline">View child health</Button></Link>
-          <Button onClick={() => { setDone(false); setV({ nutrition: "Normal", bf: "Exclusive" }); }}>Register another</Button>
+          <Button onClick={() => { setDone(false); setV({ nutrition: "Normal", bf: "Exclusive" }); setMs([]); setImm([]); }}>Register another</Button>
         </div>
       </CardContent></Card>
     </AppLayout>
@@ -51,6 +97,18 @@ function RegisterChild() {
         <CardContent className="p-6 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Child name" className="sm:col-span-2"><Input value={v.name ?? ""} onChange={(e) => s("name", e.target.value)} placeholder="e.g. Kojo Nti" maxLength={60} /></Field>
+            <Field label="Household">
+              <Select value={v.household} onValueChange={(x) => s("household", x)}>
+                <SelectTrigger><SelectValue placeholder={households.length ? "Select household" : "Loading…"} /></SelectTrigger>
+                <SelectContent>{households.map((h) => <SelectItem key={h.id} value={h.id}>{h.head_name} ({h.house_no})</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Mother (optional)">
+              <Select value={v.mother} onValueChange={(x) => s("mother", x)}>
+                <SelectTrigger><SelectValue placeholder={mothers.length ? "Select mother" : "Loading…"} /></SelectTrigger>
+                <SelectContent>{mothers.map((m) => <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
             <Field label="Birth date"><Input type="date" value={v.dob ?? ""} onChange={(e) => s("dob", e.target.value)} /></Field>
             <Field label="Sex">
               <Select value={v.sex} onValueChange={(x) => s("sex", x)}>
@@ -85,7 +143,10 @@ function RegisterChild() {
             <Label className="mb-2 block">Development milestones achieved</Label>
             <div className="grid sm:grid-cols-2 gap-2">
               {milestones.map((m) => (
-                <label key={m} className="flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/40"><Checkbox /><span className="text-sm">{m}</span></label>
+                <label key={m} className="flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/40">
+                  <Checkbox checked={ms.includes(m)} onCheckedChange={() => toggle(ms, setMs, m)} />
+                  <span className="text-sm">{m}</span>
+                </label>
               ))}
             </div>
           </div>
@@ -94,7 +155,10 @@ function RegisterChild() {
             <Label className="mb-2 block">Immunizations received</Label>
             <div className="grid sm:grid-cols-2 gap-2">
               {immSchedule.map((m) => (
-                <label key={m} className="flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/40"><Checkbox /><span className="text-sm">{m}</span></label>
+                <label key={m} className="flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/40">
+                  <Checkbox checked={imm.includes(m)} onCheckedChange={() => toggle(imm, setImm, m)} />
+                  <span className="text-sm">{m}</span>
+                </label>
               ))}
             </div>
           </div>
@@ -103,7 +167,10 @@ function RegisterChild() {
 
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => nav({ to: "/child-health" })}>Cancel</Button>
-            <Button onClick={submit}><Save className="mr-1 h-4 w-4" /> Save child</Button>
+            <Button onClick={submit} disabled={saving}>
+              {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+              Save child
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -14,16 +14,449 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      assessments: {
+        Row: {
+          ai_result: Json | null
+          assessment_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          inputs: Json
+          person_id: string | null
+          risk_level: string | null
+          risk_score: number | null
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_result?: Json | null
+          assessment_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inputs?: Json
+          person_id?: string | null
+          risk_level?: string | null
+          risk_score?: number | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_result?: Json | null
+          assessment_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inputs?: Json
+          person_id?: string | null
+          risk_level?: string | null
+          risk_score?: number | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      child_profiles: {
+        Row: {
+          birth_weight_kg: number | null
+          created_at: string
+          created_by: string | null
+          growth_notes: string | null
+          id: string
+          immunizations: Json | null
+          mother_person_id: string | null
+          person_id: string
+          updated_at: string
+        }
+        Insert: {
+          birth_weight_kg?: number | null
+          created_at?: string
+          created_by?: string | null
+          growth_notes?: string | null
+          id?: string
+          immunizations?: Json | null
+          mother_person_id?: string | null
+          person_id: string
+          updated_at?: string
+        }
+        Update: {
+          birth_weight_kg?: number | null
+          created_at?: string
+          created_by?: string | null
+          growth_notes?: string | null
+          id?: string
+          immunizations?: Json | null
+          mother_person_id?: string | null
+          person_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_profiles_mother_person_id_fkey"
+            columns: ["mother_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_profiles_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communities: {
+        Row: {
+          chps_facility: string | null
+          created_at: string
+          created_by: string | null
+          district: string | null
+          id: string
+          name: string
+          notes: string | null
+          population: number | null
+          region: string | null
+          updated_at: string
+        }
+        Insert: {
+          chps_facility?: string | null
+          created_at?: string
+          created_by?: string | null
+          district?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          population?: number | null
+          region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          chps_facility?: string | null
+          created_at?: string
+          created_by?: string | null
+          district?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          population?: number | null
+          region?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      households: {
+        Row: {
+          address: string | null
+          community_id: string | null
+          created_at: string
+          created_by: string | null
+          gps: string | null
+          head_name: string
+          house_no: string
+          id: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          community_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          gps?: string | null
+          head_name: string
+          house_no: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          community_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          gps?: string | null
+          head_name?: string
+          house_no?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "households_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          messages: Json
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          messages?: Json
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          messages?: Json
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      persons: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_of_birth: string | null
+          full_name: string
+          household_id: string | null
+          id: string
+          national_id: string | null
+          notes: string | null
+          phone: string | null
+          sex: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          full_name: string
+          household_id?: string | null
+          id?: string
+          national_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          sex?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          full_name?: string
+          household_id?: string | null
+          id?: string
+          national_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          sex?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "persons_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pregnancies: {
+        Row: {
+          anc_visits: number | null
+          created_at: string
+          created_by: string | null
+          edd_date: string | null
+          gravida: number | null
+          id: string
+          lmp_date: string | null
+          notes: string | null
+          parity: number | null
+          person_id: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          anc_visits?: number | null
+          created_at?: string
+          created_by?: string | null
+          edd_date?: string | null
+          gravida?: number | null
+          id?: string
+          lmp_date?: string | null
+          notes?: string | null
+          parity?: number | null
+          person_id: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          anc_visits?: number | null
+          created_at?: string
+          created_by?: string | null
+          edd_date?: string | null
+          gravida?: number | null
+          id?: string
+          lmp_date?: string | null
+          notes?: string | null
+          parity?: number | null
+          person_id?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pregnancies_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          facility: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          facility?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          facility?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          assessment_id: string | null
+          created_at: string
+          created_by: string | null
+          facility: string
+          id: string
+          notes: string | null
+          person_id: string | null
+          reason: string
+          status: string
+          updated_at: string
+          urgency: string | null
+        }
+        Insert: {
+          assessment_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          facility: string
+          id?: string
+          notes?: string | null
+          person_id?: string | null
+          reason: string
+          status?: string
+          updated_at?: string
+          urgency?: string | null
+        }
+        Update: {
+          assessment_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          facility?: string
+          id?: string
+          notes?: string | null
+          person_id?: string | null
+          reason?: string
+          status?: string
+          updated_at?: string
+          urgency?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "chps_worker" | "supervisor" | "administrator"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +583,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["chps_worker", "supervisor", "administrator"],
+    },
   },
 } as const

@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Save, Users } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, Loader2, Save, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { households } from "@/lib/demo-data";
+import { insertPerson, listHouseholds } from "@/lib/registrations";
 
 export const Route = createFileRoute("/register/person")({
   component: RegisterPerson,
@@ -25,7 +25,7 @@ const schema = z.object({
   phone: z.string().trim().max(20).optional(),
   nationalId: z.string().trim().max(30).optional(),
   relationship: z.string().min(1),
-  household: z.string().min(1, "Select a household"),
+  household: z.string().uuid("Select a household"),
   occupation: z.string().max(60).optional(),
   education: z.string().max(60).optional(),
   marital: z.string().max(20).optional(),
@@ -38,9 +38,13 @@ function RegisterPerson() {
   const [v, setV] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [households, setHouseholds] = useState<Array<{ id: string; head_name: string; house_no: string }>>([]);
   const s = (k: string, val: string) => setV({ ...v, [k]: val });
 
-  function submit() {
+  useEffect(() => { listHouseholds().then(setHouseholds).catch((e) => toast.error(e.message)); }, []);
+
+  async function submit() {
     const r = schema.safeParse(v);
     if (!r.success) {
       const e: Record<string, string> = {};
@@ -50,18 +54,43 @@ function RegisterPerson() {
       return;
     }
     setErrors({});
-    setDone(true);
-    toast.success("Person registered");
+    setSaving(true);
+    try {
+      const notes = [
+        r.data.relationship && `Relationship: ${r.data.relationship}`,
+        r.data.occupation && `Occupation: ${r.data.occupation}`,
+        r.data.education && `Education: ${r.data.education}`,
+        r.data.marital && `Marital: ${r.data.marital}`,
+        r.data.emergency && `Emergency: ${r.data.emergency}`,
+        r.data.medical && `Medical: ${r.data.medical}`,
+      ].filter(Boolean).join(" | ");
+      await insertPerson({
+        household_id: r.data.household,
+        full_name: `${r.data.firstName} ${r.data.lastName}`.trim(),
+        sex: r.data.gender,
+        date_of_birth: r.data.dob,
+        phone: r.data.phone || undefined,
+        national_id: r.data.nationalId || undefined,
+        notes: notes || undefined,
+      });
+      setDone(true);
+      toast.success("Person registered");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (done) {
+    const hh = households.find((h) => h.id === v.household);
     return (
       <AppLayout>
         <Card className="rounded-2xl max-w-lg mx-auto mt-8 card-elevated">
           <CardContent className="p-8 text-center">
             <div className="grid h-16 w-16 place-items-center rounded-2xl bg-success/10 text-success mx-auto mb-4 animate-float-slow"><CheckCircle2 className="h-8 w-8" /></div>
             <h2 className="text-2xl font-bold">Person registered</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{v.firstName} {v.lastName} has been added to the {v.household} household.</p>
+            <p className="mt-2 text-sm text-muted-foreground">{v.firstName} {v.lastName} has been added to the {hh?.head_name ?? ""} household.</p>
             <div className="mt-6 flex justify-center gap-2">
               <Link to="/people"><Button variant="outline">View people</Button></Link>
               <Button onClick={() => { setDone(false); setV({}); }}>Register another</Button>
@@ -98,8 +127,8 @@ function RegisterPerson() {
             </Field>
             <Field label="Household" error={errors.household}>
               <Select value={v.household} onValueChange={(x) => s("household", x)}>
-                <SelectTrigger><SelectValue placeholder="Select household" /></SelectTrigger>
-                <SelectContent>{households.map((h) => <SelectItem key={h.id} value={h.head}>{h.head} ({h.community})</SelectItem>)}</SelectContent>
+                <SelectTrigger><SelectValue placeholder={households.length ? "Select household" : "Loading…"} /></SelectTrigger>
+                <SelectContent>{households.map((h) => <SelectItem key={h.id} value={h.id}>{h.head_name} ({h.house_no})</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="Occupation"><Input value={v.occupation ?? ""} onChange={(e) => s("occupation", e.target.value)} maxLength={60} /></Field>
@@ -120,7 +149,10 @@ function RegisterPerson() {
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => nav({ to: "/people" })}>Cancel</Button>
-            <Button onClick={submit}><Save className="mr-1 h-4 w-4" /> Save person</Button>
+            <Button onClick={submit} disabled={saving}>
+              {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+              Save person
+            </Button>
           </div>
         </CardContent>
       </Card>

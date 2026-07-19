@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, HeartPulse, Save } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, HeartPulse, Loader2, Save } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { insertPregnancy, listPersons } from "@/lib/registrations";
 
 export const Route = createFileRoute("/register/pregnancy")({
   component: RegisterPregnancy,
@@ -22,6 +23,8 @@ const dangerSigns = ["Severe headache", "Blurred vision", "Vaginal bleeding", "R
 function RegisterPregnancy() {
   const nav = useNavigate();
   const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [personId, setPersonId] = useState("");
   const [status, setStatus] = useState("confirmed");
   const [ga, setGA] = useState("28");
   const [edd, setEDD] = useState("");
@@ -31,10 +34,46 @@ function RegisterPregnancy() {
   const [notes, setNotes] = useState("");
   const [prev, setPrev] = useState("");
   const [medical, setMedical] = useState("");
+  const [risks, setRisks] = useState<string[]>([]);
+  const [signs, setSigns] = useState<string[]>([]);
+  const [persons, setPersons] = useState<Array<{ id: string; full_name: string; sex: string | null }>>([]);
 
-  function submit() {
+  useEffect(() => {
+    listPersons().then((p) => setPersons(p.filter((x) => x.sex !== "M"))).catch((e) => toast.error(e.message));
+  }, []);
+
+  function toggle(list: string[], setList: (v: string[]) => void, v: string) {
+    setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  }
+
+  async function submit() {
+    if (!personId) { toast.error("Select the pregnant person"); return; }
     if (!edd) { toast.error("Expected delivery date is required"); return; }
-    setDone(true); toast.success("Pregnancy registered");
+    setSaving(true);
+    try {
+      const combinedNotes = [
+        `GA: ${ga}w`,
+        bp && `BP: ${bp}`,
+        weight && `Weight: ${weight}kg`,
+        prev && `Prev: ${prev}`,
+        medical && `Medical: ${medical}`,
+        risks.length && `Risks: ${risks.join(", ")}`,
+        signs.length && `Danger signs: ${signs.join(", ")}`,
+        notes && `Notes: ${notes}`,
+      ].filter(Boolean).join(" | ");
+      await insertPregnancy({
+        person_id: personId,
+        edd_date: edd,
+        anc_visits: Number(anc) || 0,
+        status,
+        notes: combinedNotes,
+      });
+      setDone(true); toast.success("Pregnancy registered");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (done) return (
@@ -57,6 +96,12 @@ function RegisterPregnancy() {
       <Card className="rounded-xl max-w-3xl">
         <CardContent className="p-6 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Pregnant person" className="sm:col-span-2">
+              <Select value={personId} onValueChange={setPersonId}>
+                <SelectTrigger><SelectValue placeholder={persons.length ? "Select person" : "Loading…"} /></SelectTrigger>
+                <SelectContent>{persons.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
             <Field label="Pregnancy status">
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -76,7 +121,10 @@ function RegisterPregnancy() {
             <Label className="mb-2 block">Risk factors</Label>
             <div className="grid sm:grid-cols-2 gap-2">
               {riskFactorsList.map((r) => (
-                <label key={r} className="flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/40"><Checkbox /><span className="text-sm">{r}</span></label>
+                <label key={r} className="flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/40">
+                  <Checkbox checked={risks.includes(r)} onCheckedChange={() => toggle(risks, setRisks, r)} />
+                  <span className="text-sm">{r}</span>
+                </label>
               ))}
             </div>
           </div>
@@ -85,7 +133,10 @@ function RegisterPregnancy() {
             <Label className="mb-2 block">Danger signs reported</Label>
             <div className="grid sm:grid-cols-2 gap-2">
               {dangerSigns.map((r) => (
-                <label key={r} className="flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/40"><Checkbox /><span className="text-sm">{r}</span></label>
+                <label key={r} className="flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/40">
+                  <Checkbox checked={signs.includes(r)} onCheckedChange={() => toggle(signs, setSigns, r)} />
+                  <span className="text-sm">{r}</span>
+                </label>
               ))}
             </div>
           </div>
@@ -94,7 +145,10 @@ function RegisterPregnancy() {
 
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => nav({ to: "/maternal" })}>Cancel</Button>
-            <Button onClick={submit}><Save className="mr-1 h-4 w-4" /> Save pregnancy</Button>
+            <Button onClick={submit} disabled={saving}>
+              {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+              Save pregnancy
+            </Button>
           </div>
         </CardContent>
       </Card>
