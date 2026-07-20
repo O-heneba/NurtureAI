@@ -110,3 +110,65 @@ export const nutritionChat = createServerFn({ method: "POST" })
     });
     return { reply: resp.choices?.[0]?.message?.content ?? "" };
   });
+
+/* ------------------- Modular assessment analysis ------------------- */
+
+const AnalyzeInput = z.object({
+  assessment_type: z.enum(["maternal", "newborn", "child_u5", "nutrition", "household", "followup"]),
+  person: z.record(z.string(), z.any()).default({}),
+  danger_signs: z.array(z.string()).default([]),
+  sections: z.record(z.string(), z.any()).default({}),
+  rules: z.object({
+    priority: z.string(),
+    flags: z.array(z.object({ code: z.string(), message: z.string(), severity: z.string() })).default([]),
+    missing: z.array(z.string()).default([]),
+  }),
+  previous: z.record(z.string(), z.any()).optional(),
+});
+
+const ANALYZE_SYSTEM = `You are NurtureAI, a decision-support assistant for Ghanaian CHPS community health workers.
+You DO NOT diagnose and DO NOT prescribe treatment. You summarise structured field data, explain why a rules
+engine prioritised a case, suggest information gaps, and recommend next steps a health worker can consider.
+Base guidance on Ghana Health Service and WHO community-health guidance. Prefer locally available Ghanaian
+foods for nutrition guidance. Return STRICT JSON only, no markdown fences.
+
+Schema:
+{
+  "priority_level": "routine" | "monitor" | "priority_review" | "urgent",
+  "summary": string (2-4 sentences, plain clinical language),
+  "contributing_factors": string[] (short phrases),
+  "missing_information": string[] (what should still be collected),
+  "recommended_next_steps": string[] (imperative bullets, community-health scope),
+  "follow_up_suggestion": string (when and what to check),
+  "referral_consideration": string (empty string if not indicated; otherwise why and urgency; do not name a facility unless data provided one),
+  "nutrition_guidance": string (locally-appropriate; empty if not applicable),
+  "uncertainty_notice": string (limitations of this AI-assisted review)
+}
+
+Rules:
+- Respect the rules-engine priority: do not downgrade an "urgent" or "priority_review" from the rules engine unless the structured data clearly contradicts it, and explain any disagreement in "uncertainty_notice".
+- Never treat missing fields as a negative finding — list them under "missing_information".
+- Do not invent vitals, medications, or diagnoses not present in the data.
+- Keep every string concise and readable on a mobile screen.`;
+
+export const analyzeAssessment = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => AnalyzeInput.parse(input))
+  .handler(async ({ data }) => {
+    const userPrompt = `Analyse the following structured community-health assessment and return the JSON described.\n\n${JSON.stringify(data, null, 2)}`;
+    const resp = await callGateway({
+      model: DEFAULT_MODEL,
+      messages: [
+        { role: "system", content: ANALYZE_SYSTEM },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+    });
+    const raw = resp.choices?.[0]?.message?.content ?? "{}";
+    try {
+      return JSON.parse(raw);
+    } catch {
+      const cleaned = raw.replace(/```json|```/g, "").trim();
+      return JSON.parse(cleaned);
+    }
+  });
+
