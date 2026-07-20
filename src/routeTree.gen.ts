@@ -35,6 +35,7 @@ import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as HouseholdIdRouteImport } from './routes/household.$id'
 import { Route as CommunityIdRouteImport } from './routes/community.$id'
 import { Route as ChildIdRouteImport } from './routes/child.$id'
+import { Route as AssessmentNewRouteImport } from './routes/assessment.new'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -166,6 +167,11 @@ const ChildIdRoute = ChildIdRouteImport.update({
   path: '/child/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssessmentNewRoute = AssessmentNewRouteImport.update({
+  id: '/assessment/new',
+  path: '/assessment/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
+  '/assessment/new': typeof AssessmentNewRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
   '/household/$id': typeof HouseholdIdRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
+  '/assessment/new': typeof AssessmentNewRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
   '/household/$id': typeof HouseholdIdRoute
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
+  '/assessment/new': typeof AssessmentNewRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
   '/household/$id': typeof HouseholdIdRoute
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/welcome'
+    | '/assessment/new'
     | '/child/$id'
     | '/community/$id'
     | '/household/$id'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/welcome'
+    | '/assessment/new'
     | '/child/$id'
     | '/community/$id'
     | '/household/$id'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/welcome'
+    | '/assessment/new'
     | '/child/$id'
     | '/community/$id'
     | '/household/$id'
@@ -357,6 +369,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   WelcomeRoute: typeof WelcomeRoute
+  AssessmentNewRoute: typeof AssessmentNewRoute
   ChildIdRoute: typeof ChildIdRoute
   CommunityIdRoute: typeof CommunityIdRoute
   HouseholdIdRoute: typeof HouseholdIdRoute
@@ -552,6 +565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChildIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/assessment/new': {
+      id: '/assessment/new'
+      path: '/assessment/new'
+      fullPath: '/assessment/new'
+      preLoaderRoute: typeof AssessmentNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -573,6 +593,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   WelcomeRoute: WelcomeRoute,
+  AssessmentNewRoute: AssessmentNewRoute,
   ChildIdRoute: ChildIdRoute,
   CommunityIdRoute: CommunityIdRoute,
   HouseholdIdRoute: HouseholdIdRoute,
