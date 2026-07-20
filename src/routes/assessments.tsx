@@ -115,7 +115,7 @@ function AssessmentsList() {
                     {r.summary && <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{r.summary}</div>}
                   </div>
                   <div className="text-right shrink-0 space-y-1">
-                    <RiskBadge level={prMeta.label} />
+                    <StatusPill tone={prMeta.tone === "destructive" ? "destructive" : prMeta.tone === "warning" ? "warning" : prMeta.tone === "info" ? "info" : "success"}>{prMeta.label}</StatusPill>
                     {typeof r.risk_score === "number" && <div className="text-xs text-muted-foreground">Score {r.risk_score}</div>}
                   </div>
                 </Link>
