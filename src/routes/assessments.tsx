@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppLayout } from "@/components/app-layout";
-import { PageHeader, EmptyState, StatusPill, RiskBadge, ListRowSkeleton } from "@/components/shared";
+import { PageHeader, EmptyState, StatusPill, ListRowSkeleton } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
