@@ -93,9 +93,23 @@ function AssessmentDetail() {
         description={`${meta?.label ?? type} · ${new Date(row.created_at).toLocaleString()}`}
         breadcrumbs={[{ label: "Assessments", to: "/assessments" }, { label: "Result" }]}
         actions={
-          <Button variant="outline" onClick={() => navigate({ to: "/assessment/new" })}>
-            New assessment
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => navigate({
+              to: "/followup/new",
+              search: { assessment_id: row.id, person_id: row.person_id ?? undefined },
+            })}>
+              Schedule follow-up
+            </Button>
+            <Button variant="outline" onClick={() => navigate({
+              to: "/referral/new",
+              search: { assessment_id: row.id, person_id: row.person_id ?? undefined },
+            })}>
+              <Send className="h-4 w-4 mr-1.5" /> Create referral
+            </Button>
+            <Button onClick={() => navigate({ to: "/assessment/new" })}>
+              New assessment
+            </Button>
+          </div>
         }
       />
 
