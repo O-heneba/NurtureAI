@@ -21,6 +21,7 @@ import { Route as MaternalRouteImport } from './routes/maternal'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HouseholdsRouteImport } from './routes/households'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as FollowupsRouteImport } from './routes/followups'
 import { Route as CommunitiesRouteImport } from './routes/communities'
 import { Route as ChildHealthRouteImport } from './routes/child-health'
 import { Route as AssistantRouteImport } from './routes/assistant'
@@ -30,9 +31,13 @@ import { Route as RegisterPregnancyRouteImport } from './routes/register.pregnan
 import { Route as RegisterPersonRouteImport } from './routes/register.person'
 import { Route as RegisterHouseholdRouteImport } from './routes/register.household'
 import { Route as RegisterChildRouteImport } from './routes/register.child'
+import { Route as ReferralNewRouteImport } from './routes/referral.new'
+import { Route as ReferralIdRouteImport } from './routes/referral.$id'
 import { Route as PregnancyIdRouteImport } from './routes/pregnancy.$id'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as HouseholdIdRouteImport } from './routes/household.$id'
+import { Route as FollowupNewRouteImport } from './routes/followup.new'
+import { Route as FollowupIdRouteImport } from './routes/followup.$id'
 import { Route as CommunityIdRouteImport } from './routes/community.$id'
 import { Route as ChildIdRouteImport } from './routes/child.$id'
 import { Route as AssessmentNewRouteImport } from './routes/assessment.new'
@@ -98,6 +103,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FollowupsRoute = FollowupsRouteImport.update({
+  id: '/followups',
+  path: '/followups',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CommunitiesRoute = CommunitiesRouteImport.update({
   id: '/communities',
   path: '/communities',
@@ -143,6 +153,16 @@ const RegisterChildRoute = RegisterChildRouteImport.update({
   path: '/register/child',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReferralNewRoute = ReferralNewRouteImport.update({
+  id: '/referral/new',
+  path: '/referral/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralIdRoute = ReferralIdRouteImport.update({
+  id: '/referral/$id',
+  path: '/referral/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PregnancyIdRoute = PregnancyIdRouteImport.update({
   id: '/pregnancy/$id',
   path: '/pregnancy/$id',
@@ -156,6 +176,16 @@ const PersonIdRoute = PersonIdRouteImport.update({
 const HouseholdIdRoute = HouseholdIdRouteImport.update({
   id: '/household/$id',
   path: '/household/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FollowupNewRoute = FollowupNewRouteImport.update({
+  id: '/followup/new',
+  path: '/followup/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FollowupIdRoute = FollowupIdRouteImport.update({
+  id: '/followup/$id',
+  path: '/followup/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommunityIdRoute = CommunityIdRouteImport.update({
@@ -185,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/assistant': typeof AssistantRoute
   '/child-health': typeof ChildHealthRoute
   '/communities': typeof CommunitiesRoute
+  '/followups': typeof FollowupsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
@@ -201,9 +232,13 @@ export interface FileRoutesByFullPath {
   '/assessment/new': typeof AssessmentNewRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
+  '/followup/$id': typeof FollowupIdRoute
+  '/followup/new': typeof FollowupNewRoute
   '/household/$id': typeof HouseholdIdRoute
   '/person/$id': typeof PersonIdRoute
   '/pregnancy/$id': typeof PregnancyIdRoute
+  '/referral/$id': typeof ReferralIdRoute
+  '/referral/new': typeof ReferralNewRoute
   '/register/child': typeof RegisterChildRoute
   '/register/household': typeof RegisterHouseholdRoute
   '/register/person': typeof RegisterPersonRoute
@@ -215,6 +250,7 @@ export interface FileRoutesByTo {
   '/assistant': typeof AssistantRoute
   '/child-health': typeof ChildHealthRoute
   '/communities': typeof CommunitiesRoute
+  '/followups': typeof FollowupsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
@@ -231,9 +267,13 @@ export interface FileRoutesByTo {
   '/assessment/new': typeof AssessmentNewRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
+  '/followup/$id': typeof FollowupIdRoute
+  '/followup/new': typeof FollowupNewRoute
   '/household/$id': typeof HouseholdIdRoute
   '/person/$id': typeof PersonIdRoute
   '/pregnancy/$id': typeof PregnancyIdRoute
+  '/referral/$id': typeof ReferralIdRoute
+  '/referral/new': typeof ReferralNewRoute
   '/register/child': typeof RegisterChildRoute
   '/register/household': typeof RegisterHouseholdRoute
   '/register/person': typeof RegisterPersonRoute
@@ -246,6 +286,7 @@ export interface FileRoutesById {
   '/assistant': typeof AssistantRoute
   '/child-health': typeof ChildHealthRoute
   '/communities': typeof CommunitiesRoute
+  '/followups': typeof FollowupsRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/households': typeof HouseholdsRoute
   '/login': typeof LoginRoute
@@ -262,9 +303,13 @@ export interface FileRoutesById {
   '/assessment/new': typeof AssessmentNewRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
+  '/followup/$id': typeof FollowupIdRoute
+  '/followup/new': typeof FollowupNewRoute
   '/household/$id': typeof HouseholdIdRoute
   '/person/$id': typeof PersonIdRoute
   '/pregnancy/$id': typeof PregnancyIdRoute
+  '/referral/$id': typeof ReferralIdRoute
+  '/referral/new': typeof ReferralNewRoute
   '/register/child': typeof RegisterChildRoute
   '/register/household': typeof RegisterHouseholdRoute
   '/register/person': typeof RegisterPersonRoute
@@ -278,6 +323,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/child-health'
     | '/communities'
+    | '/followups'
     | '/forgot-password'
     | '/households'
     | '/login'
@@ -294,9 +340,13 @@ export interface FileRouteTypes {
     | '/assessment/new'
     | '/child/$id'
     | '/community/$id'
+    | '/followup/$id'
+    | '/followup/new'
     | '/household/$id'
     | '/person/$id'
     | '/pregnancy/$id'
+    | '/referral/$id'
+    | '/referral/new'
     | '/register/child'
     | '/register/household'
     | '/register/person'
@@ -308,6 +358,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/child-health'
     | '/communities'
+    | '/followups'
     | '/forgot-password'
     | '/households'
     | '/login'
@@ -324,9 +375,13 @@ export interface FileRouteTypes {
     | '/assessment/new'
     | '/child/$id'
     | '/community/$id'
+    | '/followup/$id'
+    | '/followup/new'
     | '/household/$id'
     | '/person/$id'
     | '/pregnancy/$id'
+    | '/referral/$id'
+    | '/referral/new'
     | '/register/child'
     | '/register/household'
     | '/register/person'
@@ -338,6 +393,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/child-health'
     | '/communities'
+    | '/followups'
     | '/forgot-password'
     | '/households'
     | '/login'
@@ -354,9 +410,13 @@ export interface FileRouteTypes {
     | '/assessment/new'
     | '/child/$id'
     | '/community/$id'
+    | '/followup/$id'
+    | '/followup/new'
     | '/household/$id'
     | '/person/$id'
     | '/pregnancy/$id'
+    | '/referral/$id'
+    | '/referral/new'
     | '/register/child'
     | '/register/household'
     | '/register/person'
@@ -369,6 +429,7 @@ export interface RootRouteChildren {
   AssistantRoute: typeof AssistantRoute
   ChildHealthRoute: typeof ChildHealthRoute
   CommunitiesRoute: typeof CommunitiesRoute
+  FollowupsRoute: typeof FollowupsRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HouseholdsRoute: typeof HouseholdsRoute
   LoginRoute: typeof LoginRoute
@@ -385,9 +446,13 @@ export interface RootRouteChildren {
   AssessmentNewRoute: typeof AssessmentNewRoute
   ChildIdRoute: typeof ChildIdRoute
   CommunityIdRoute: typeof CommunityIdRoute
+  FollowupIdRoute: typeof FollowupIdRoute
+  FollowupNewRoute: typeof FollowupNewRoute
   HouseholdIdRoute: typeof HouseholdIdRoute
   PersonIdRoute: typeof PersonIdRoute
   PregnancyIdRoute: typeof PregnancyIdRoute
+  ReferralIdRoute: typeof ReferralIdRoute
+  ReferralNewRoute: typeof ReferralNewRoute
   RegisterChildRoute: typeof RegisterChildRoute
   RegisterHouseholdRoute: typeof RegisterHouseholdRoute
   RegisterPersonRoute: typeof RegisterPersonRoute
@@ -480,6 +545,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/followups': {
+      id: '/followups'
+      path: '/followups'
+      fullPath: '/followups'
+      preLoaderRoute: typeof FollowupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/communities': {
       id: '/communities'
       path: '/communities'
@@ -543,6 +615,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterChildRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/referral/new': {
+      id: '/referral/new'
+      path: '/referral/new'
+      fullPath: '/referral/new'
+      preLoaderRoute: typeof ReferralNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referral/$id': {
+      id: '/referral/$id'
+      path: '/referral/$id'
+      fullPath: '/referral/$id'
+      preLoaderRoute: typeof ReferralIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pregnancy/$id': {
       id: '/pregnancy/$id'
       path: '/pregnancy/$id'
@@ -562,6 +648,20 @@ declare module '@tanstack/react-router' {
       path: '/household/$id'
       fullPath: '/household/$id'
       preLoaderRoute: typeof HouseholdIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/followup/new': {
+      id: '/followup/new'
+      path: '/followup/new'
+      fullPath: '/followup/new'
+      preLoaderRoute: typeof FollowupNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/followup/$id': {
+      id: '/followup/$id'
+      path: '/followup/$id'
+      fullPath: '/followup/$id'
+      preLoaderRoute: typeof FollowupIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/community/$id': {
@@ -601,6 +701,7 @@ const rootRouteChildren: RootRouteChildren = {
   AssistantRoute: AssistantRoute,
   ChildHealthRoute: ChildHealthRoute,
   CommunitiesRoute: CommunitiesRoute,
+  FollowupsRoute: FollowupsRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   HouseholdsRoute: HouseholdsRoute,
   LoginRoute: LoginRoute,
@@ -617,9 +718,13 @@ const rootRouteChildren: RootRouteChildren = {
   AssessmentNewRoute: AssessmentNewRoute,
   ChildIdRoute: ChildIdRoute,
   CommunityIdRoute: CommunityIdRoute,
+  FollowupIdRoute: FollowupIdRoute,
+  FollowupNewRoute: FollowupNewRoute,
   HouseholdIdRoute: HouseholdIdRoute,
   PersonIdRoute: PersonIdRoute,
   PregnancyIdRoute: PregnancyIdRoute,
+  ReferralIdRoute: ReferralIdRoute,
+  ReferralNewRoute: ReferralNewRoute,
   RegisterChildRoute: RegisterChildRoute,
   RegisterHouseholdRoute: RegisterHouseholdRoute,
   RegisterPersonRoute: RegisterPersonRoute,

@@ -2,6 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, MapPin, Home, Users, HeartPulse, Baby, ClipboardCheck,
   Sparkles, Send, Apple, BarChart3, Settings, Bell, LogOut, Menu, Search, Wifi, WifiOff, User,
+  CalendarCheck,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const nav = [
   { to: "/assessments", label: "Assessments", icon: ClipboardCheck },
   { to: "/assistant", label: "AI Assistant", icon: Sparkles },
   { to: "/referrals", label: "Referrals", icon: Send },
+  { to: "/followups", label: "Follow-ups", icon: CalendarCheck },
   { to: "/nutrition", label: "Nutrition", icon: Apple },
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings },
