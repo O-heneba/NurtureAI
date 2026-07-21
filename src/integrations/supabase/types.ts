@@ -154,6 +154,265 @@ export type Database = {
         }
         Relationships: []
       }
+      facilities: {
+        Row: {
+          address: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by: string | null
+          district: string | null
+          gps_lat: number | null
+          gps_lng: number | null
+          id: string
+          name: string
+          notes: string | null
+          region: string | null
+          services: string[]
+          sub_district: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          district?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          region?: string | null
+          services?: string[]
+          sub_district?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          district?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          region?: string | null
+          services?: string[]
+          sub_district?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      follow_up_attempts: {
+        Row: {
+          actor: string | null
+          attempted_at: string
+          barrier: string | null
+          contacted: boolean
+          follow_up_id: string
+          id: string
+          method: string | null
+          next_attempt_at: string | null
+          notes: string | null
+          result: string | null
+        }
+        Insert: {
+          actor?: string | null
+          attempted_at?: string
+          barrier?: string | null
+          contacted?: boolean
+          follow_up_id: string
+          id?: string
+          method?: string | null
+          next_attempt_at?: string | null
+          notes?: string | null
+          result?: string | null
+        }
+        Update: {
+          actor?: string | null
+          attempted_at?: string
+          barrier?: string | null
+          contacted?: boolean
+          follow_up_id?: string
+          id?: string
+          method?: string | null
+          next_attempt_at?: string | null
+          notes?: string | null
+          result?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_attempts_follow_up_id_fkey"
+            columns: ["follow_up_id"]
+            isOneToOne: false
+            referencedRelation: "follow_ups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      follow_up_outcomes: {
+        Row: {
+          barriers: string[]
+          care_received: string | null
+          contact_status: string | null
+          created_at: string
+          current_condition: string | null
+          follow_up_id: string
+          id: string
+          new_symptoms: string | null
+          next_action: string | null
+          next_follow_up_at: string | null
+          notes: string | null
+          recommendations: string | null
+          recorded_by: string | null
+          referral_completed: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          barriers?: string[]
+          care_received?: string | null
+          contact_status?: string | null
+          created_at?: string
+          current_condition?: string | null
+          follow_up_id: string
+          id?: string
+          new_symptoms?: string | null
+          next_action?: string | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          recommendations?: string | null
+          recorded_by?: string | null
+          referral_completed?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          barriers?: string[]
+          care_received?: string | null
+          contact_status?: string | null
+          created_at?: string
+          current_condition?: string | null
+          follow_up_id?: string
+          id?: string
+          new_symptoms?: string | null
+          next_action?: string | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          recommendations?: string | null
+          recorded_by?: string | null
+          referral_completed?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_outcomes_follow_up_id_fkey"
+            columns: ["follow_up_id"]
+            isOneToOne: true
+            referencedRelation: "follow_ups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      follow_ups: {
+        Row: {
+          assessment_id: string | null
+          assigned_to: string | null
+          community_id: string | null
+          contact_method: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string
+          household_id: string | null
+          id: string
+          notes: string | null
+          person_id: string | null
+          priority: string
+          purpose: string | null
+          referral_id: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          assigned_to?: string | null
+          community_id?: string | null
+          contact_method?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          household_id?: string | null
+          id?: string
+          notes?: string | null
+          person_id?: string | null
+          priority?: string
+          purpose?: string | null
+          referral_id?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string | null
+          assigned_to?: string | null
+          community_id?: string | null
+          contact_method?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          household_id?: string | null
+          id?: string
+          notes?: string | null
+          person_id?: string | null
+          priority?: string
+          purpose?: string | null
+          referral_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_ups_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       households: {
         Row: {
           address: string | null
@@ -364,43 +623,164 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_outcomes: {
+        Row: {
+          attended_at: string | null
+          barrier: string | null
+          created_at: string
+          facility_attended: string | null
+          further_action_required: boolean
+          id: string
+          notes: string | null
+          outcome: string | null
+          recorded_by: string | null
+          referral_id: string
+          seen: boolean | null
+          service_received: string | null
+          updated_at: string
+        }
+        Insert: {
+          attended_at?: string | null
+          barrier?: string | null
+          created_at?: string
+          facility_attended?: string | null
+          further_action_required?: boolean
+          id?: string
+          notes?: string | null
+          outcome?: string | null
+          recorded_by?: string | null
+          referral_id: string
+          seen?: boolean | null
+          service_received?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attended_at?: string | null
+          barrier?: string | null
+          created_at?: string
+          facility_attended?: string | null
+          further_action_required?: boolean
+          id?: string
+          notes?: string | null
+          outcome?: string | null
+          recorded_by?: string | null
+          referral_id?: string
+          seen?: boolean | null
+          service_received?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_outcomes_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: true
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_status_history: {
+        Row: {
+          actor: string | null
+          at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          referral_id: string
+          to_status: string
+        }
+        Insert: {
+          actor?: string | null
+          at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          referral_id: string
+          to_status: string
+        }
+        Update: {
+          actor?: string | null
+          at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          referral_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_status_history_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       referrals: {
         Row: {
+          acknowledged_at: string | null
           assessment_id: string | null
+          category: string | null
+          completed_at: string | null
           created_at: string
           created_by: string | null
           facility: string
+          facility_id: string | null
+          findings: string | null
+          follow_up_required: boolean
           id: string
           notes: string | null
           person_id: string | null
           reason: string
+          requested_service: string | null
           status: string
+          submitted_at: string | null
+          symptoms: string | null
           updated_at: string
           urgency: string | null
         }
         Insert: {
+          acknowledged_at?: string | null
           assessment_id?: string | null
+          category?: string | null
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           facility: string
+          facility_id?: string | null
+          findings?: string | null
+          follow_up_required?: boolean
           id?: string
           notes?: string | null
           person_id?: string | null
           reason: string
+          requested_service?: string | null
           status?: string
+          submitted_at?: string | null
+          symptoms?: string | null
           updated_at?: string
           urgency?: string | null
         }
         Update: {
+          acknowledged_at?: string | null
           assessment_id?: string | null
+          category?: string | null
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           facility?: string
+          facility_id?: string | null
+          findings?: string | null
+          follow_up_required?: boolean
           id?: string
           notes?: string | null
           person_id?: string | null
           reason?: string
+          requested_service?: string | null
           status?: string
+          submitted_at?: string | null
+          symptoms?: string | null
           updated_at?: string
           urgency?: string | null
         }
@@ -410,6 +790,13 @@ export type Database = {
             columns: ["assessment_id"]
             isOneToOne: false
             referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
             referencedColumns: ["id"]
           },
           {
