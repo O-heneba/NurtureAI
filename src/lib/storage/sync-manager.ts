@@ -374,9 +374,14 @@ export class SyncManager {
             (!operation.retryAfter || Date.parse(operation.retryAfter) <= now),
         )
         .sort(
-          (left, right) =>
-            syncOrder.indexOf(left.entityType as SyncEntityType) -
-            syncOrder.indexOf(right.entityType as SyncEntityType),
+          (left, right) => {
+            const entityOrder =
+              syncOrder.indexOf(left.entityType as SyncEntityType) -
+              syncOrder.indexOf(right.entityType as SyncEntityType);
+            if (entityOrder !== 0) return entityOrder;
+            const operationOrder = { create: 0, update: 1, delete: 2 };
+            return operationOrder[left.operationType] - operationOrder[right.operationType];
+          },
         );
       for (const operation of operations) await this.process(operation);
       this.snapshot = { ...this.snapshot, lastSyncAt: new Date().toISOString() };
@@ -429,6 +434,7 @@ export class SyncManager {
       failed: operations.filter((operation) => operation.syncStatus === "failed").length,
       conflicts: operations.filter((operation) => operation.syncStatus === "conflict").length,
     };
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("nurture-sync-status"));
   }
 }
 

@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { listCommunities, listHouseholds } from "@/lib/registrations";
+import { listCommunities } from "@/lib/registrations";
+import { listWorkflowHouseholds } from "@/lib/household-person.service";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/households")({
@@ -57,7 +58,7 @@ function Households() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([listHouseholds(), listCommunities()])
+    Promise.all([listWorkflowHouseholds(), listCommunities()])
       .then(([householdData, communityData]) => {
         setHouseholds(householdData);
         setCommunities(communityData);

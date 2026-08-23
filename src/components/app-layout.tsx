@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { OfflineStatus } from "@/components/offline-status";
+import { syncManager } from "@/lib/storage/sync-manager";
 
 const nav = [
   {
@@ -345,6 +346,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
+
+  useEffect(() => {
+    if (!loading && user) {
+      syncManager.start();
+      return () => syncManager.stop();
+    }
+  }, [loading, user]);
 
   if (loading || !user) {
     return (

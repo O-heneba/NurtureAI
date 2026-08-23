@@ -128,8 +128,8 @@ export const householdStore = {
 
     const updated: LocalHousehold = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.households.put(updated);
@@ -187,8 +187,8 @@ export const personStore = {
 
     const updated: LocalPerson = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.persons.put(updated);
@@ -253,8 +253,8 @@ export const pregnancyStore = {
 
     const updated: LocalPregnancy = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.pregnancies.put(updated);
@@ -319,8 +319,8 @@ export const childProfileStore = {
 
     const updated: LocalChildProfile = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.child_profiles.put(updated);
@@ -385,8 +385,8 @@ export const assessmentStore = {
 
     const updated: LocalAssessment = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.assessments.put(updated);
@@ -451,8 +451,8 @@ export const referralStore = {
 
     const updated: LocalReferral = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.referrals.put(updated);
@@ -517,8 +517,8 @@ export const followUpStore = {
 
     const updated: LocalFollowUp = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.follow_ups.put(updated);
@@ -572,8 +572,8 @@ export const followUpAttemptStore = {
 
     const updated: LocalFollowUpAttempt = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.follow_up_attempts.put(updated);
@@ -619,8 +619,8 @@ export const followUpOutcomeStore = {
 
     const updated: LocalFollowUpOutcome = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.follow_up_outcomes.put(updated);
@@ -673,8 +673,8 @@ export const personNotesStore = {
 
     const updated: LocalPersonNotes = {
       ...existing,
-      ...updates,
       ...updateSyncTimestamp(existing),
+      ...updates,
     };
 
     await db.person_notes.put(updated);

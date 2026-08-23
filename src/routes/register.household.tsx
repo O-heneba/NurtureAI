@@ -18,7 +18,8 @@ import { CheckCircle2, Home, Loader2, MapPin, Save, Compass } from "lucide-react
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { insertHousehold, listCommunities, listHouseholds } from "@/lib/registrations";
+import { listCommunities } from "@/lib/registrations";
+import { createWorkflowHousehold, listWorkflowHouseholds } from "@/lib/household-person.service";
 
 export const Route = createFileRoute("/register/household")({
   component: RegisterHousehold,
@@ -106,7 +107,7 @@ function RegisterHousehold() {
   >([]);
 
   useEffect(() => {
-    Promise.all([listCommunities(), listHouseholds()])
+    Promise.all([listCommunities(), listWorkflowHouseholds()])
       .then(([communitiesData, householdsData]) => {
         setCommunities(communitiesData);
         setExistingHouseholds(householdsData);
@@ -163,7 +164,7 @@ function RegisterHousehold() {
     setErrors({});
     setSaving(true);
     try {
-      await insertHousehold({
+      const saved = await createWorkflowHousehold({
         community_id: r.data.community_id,
         house_no: r.data.house_no,
         head_name: r.data.head_name,
@@ -180,7 +181,7 @@ function RegisterHousehold() {
         draft: r.data.draft,
       });
       setDone(true);
-      toast.success("Household registered");
+      toast.success(saved.workflowStatus === "pending" ? "Household saved locally · pending sync" : "Household registered");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {

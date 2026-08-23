@@ -18,7 +18,7 @@ import { CheckCircle2, Loader2, Save, Users, AlertTriangle } from "lucide-react"
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { insertPerson, listHouseholds, listPersons } from "@/lib/registrations";
+import { createWorkflowPerson, listWorkflowHouseholds, listWorkflowPersons } from "@/lib/household-person.service";
 
 export const Route = createFileRoute("/register/person")({
   component: RegisterPerson,
@@ -60,12 +60,12 @@ const schema = z.object({
   draft: z.boolean().optional(),
 });
 
-type PersonFormState = z.infer<typeof schema>;
+type PersonFormState = Omit<z.infer<typeof schema>, "sex"> & { sex: "" | "F" | "M" };
 
 const initialState: PersonFormState = {
   household_id: "",
   full_name: "",
-  sex: "",
+  sex: "" as "" | "F" | "M",
   date_of_birth: "",
   phone: "",
   national_id: "",
@@ -96,7 +96,7 @@ function RegisterPerson() {
   >([]);
 
   useEffect(() => {
-    Promise.all([listHouseholds(), listPersons()])
+    Promise.all([listWorkflowHouseholds(), listWorkflowPersons()])
       .then(([householdsData, personsData]) => {
         setHouseholds(householdsData);
         setPersons(personsData);
@@ -160,7 +160,7 @@ function RegisterPerson() {
     setErrors({});
     setSaving(true);
     try {
-      await insertPerson({
+      const saved = await createWorkflowPerson({
         household_id: r.data.household_id,
         full_name: r.data.full_name,
         sex: r.data.sex,
@@ -178,7 +178,7 @@ function RegisterPerson() {
         notes: r.data.notes,
       });
       setDone(true);
-      toast.success("Person registered");
+      toast.success(saved.workflowStatus === "pending" ? "Person saved locally · pending sync" : "Person registered");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {

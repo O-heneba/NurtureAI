@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Search, Phone } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { listCommunities, listHouseholds, listPersons } from "@/lib/registrations";
+import { listCommunities } from "@/lib/registrations";
+import { listWorkflowHouseholds, listWorkflowPersons } from "@/lib/household-person.service";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/people")({
@@ -39,7 +40,7 @@ function People() {
     setLoading(true);
     setLoadError(null);
 
-    Promise.all([listPersons(), listHouseholds(), listCommunities()])
+    Promise.all([listWorkflowPersons(), listWorkflowHouseholds(), listCommunities()])
       .then(([personRows, householdRows, communityRows]) => {
         if (!active) return;
         const householdsById = new Map(householdRows.map((household) => [household.id, household]));

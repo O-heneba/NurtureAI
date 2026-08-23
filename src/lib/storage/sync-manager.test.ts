@@ -3,6 +3,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "./db";
 import { householdStore, personStore, syncQueueStore } from "./local-store";
 import { SyncManager, queueCreate, queueDelete } from "./sync-manager";
+import {
+  createWorkflowHousehold,
+  createWorkflowPerson,
+  listWorkflowHouseholds,
+  listWorkflowPersons,
+  updateWorkflowHousehold,
+  updateWorkflowPerson,
+} from "@/lib/household-person.service";
 
 const householdData = {
   community_id: "existing-community-id",
@@ -98,8 +106,77 @@ describe("offline synchronization infrastructure", () => {
     await syncQueueStore.update(failed.id, { retryAfter: new Date(0).toISOString() });
     await manager.syncNow();
 
-    expect(await syncQueueStore.count()).toBe(0);
+    expect(await syncQueueStore.list()).toEqual([]);
     expect((await householdStore.get(household.localId))?.remoteId).toBe(household.localId);
     expect((await householdStore.get(household.localId))?.syncStatus).toBe("synced");
+  });
+
+  it("creates and reads a linked household and person locally across reload-style reads", async () => {
+    const household = await createWorkflowHousehold(householdData);
+    const person = await createWorkflowPerson({
+      full_name: "Akosua Mensah",
+      household_id: household.localId,
+      sex: "F",
+      date_of_birth: "1994-01-01",
+    });
+
+    const households = await listWorkflowHouseholds();
+    const people = await listWorkflowPersons();
+    expect(households.find((row) => row.id === household.localId)?.workflowStatus).toBe("pending");
+    expect(people.find((row) => row.id === person.localId)?.household_id).toBe(household.localId);
+
+    await db.close();
+    db.open();
+    const reloadedHouseholds = await listWorkflowHouseholds();
+    const reloadedPeople = await listWorkflowPersons();
+    expect(reloadedHouseholds.some((row) => row.localId === household.localId)).toBe(true);
+    expect(reloadedPeople.find((row) => row.localId === person.localId)?.household_id).toBe(
+      household.localId,
+    );
+  });
+
+  it("edits linked records offline and syncs both updates after reconnect", async () => {
+    const household = await createWorkflowHousehold(householdData);
+    const person = await createWorkflowPerson({
+      full_name: "Yaw Mensah",
+      household_id: household.localId,
+      sex: "M",
+      date_of_birth: "1990-01-01",
+    });
+    const editedHousehold = await updateWorkflowHousehold(household.localId, { head_name: "Ama Updated" });
+    const editedPerson = await updateWorkflowPerson(person.localId, { phone: "+233240000000" });
+
+    expect(editedHousehold.head_name).toBe("Ama Updated");
+    expect(editedPerson.phone).toBe("+233240000000");
+    await db.close();
+    await db.open();
+    expect((await householdStore.get(household.localId))?.head_name).toBe("Ama Updated");
+    expect((await personStore.get(person.localId))?.phone).toBe("+233240000000");
+
+    let remoteHousehold: Record<string, unknown> = { updated_at: new Date(0).toISOString() };
+    let remotePerson: Record<string, unknown> = { updated_at: new Date(0).toISOString() };
+    const client = {
+      from: (tableName: string) => ({
+        insert: () => ({ select: () => ({ single: async () => ({ data: { id: "remote-id" }, error: null }) }) }),
+        select: () => ({
+          eq: (_field: string, id: string) => ({
+            maybeSingle: async () => ({ data: tableName === "households" ? remoteHousehold : remotePerson, error: null }),
+          }),
+        }),
+        update: (payload: Record<string, unknown>) => ({
+          eq: async () => {
+            if (tableName === "households") remoteHousehold = { ...remoteHousehold, ...payload };
+            else remotePerson = { ...remotePerson, ...payload };
+            return { error: null };
+          },
+        }),
+        delete: () => ({ eq: async () => ({ error: null }) }),
+      }),
+    };
+    const manager = new SyncManager(client);
+    await manager.syncNow();
+    expect(await syncQueueStore.list()).toEqual([]);
+    expect((await householdStore.get(household.localId))?.syncStatus).toBe("synced");
+    expect((await personStore.get(person.localId))?.syncStatus).toBe("synced");
   });
 });

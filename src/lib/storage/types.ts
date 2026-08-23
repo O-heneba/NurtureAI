@@ -44,13 +44,22 @@ export interface SyncMetadata {
  */
 export interface LocalHousehold extends SyncMetadata {
   address?: string | null;
+  address_description?: string | null;
+  barriers?: string[] | null;
   community_id?: string | null;
+  composition_breakdown?: string | null;
   created_by?: string | null;
+  data_completeness?: number | null;
+  draft?: boolean | null;
   gps?: string | null;
   head_name: string;
   house_no: string;
+  living_conditions?: string | null;
+  location_notes?: string | null;
   notes?: string | null;
   phone?: string | null;
+  next_follow_up_at?: string | null;
+  priority_status?: string | null;
 }
 
 /**
@@ -60,11 +69,21 @@ export interface LocalHousehold extends SyncMetadata {
 export interface LocalPerson extends SyncMetadata {
   created_by?: string | null;
   date_of_birth?: string | null;
+  data_completeness?: number | null;
+  disability_status?: string | null;
+  draft?: boolean | null;
+  education?: string | null;
+  emergency_contact?: string | null;
   full_name: string;
   household_id?: string | null;
+  marital_status?: string | null;
   national_id?: string | null;
   notes?: string | null;
+  occupation?: string | null;
   phone?: string | null;
+  preferred_name?: string | null;
+  priority_status?: string | null;
+  profile_types?: string[] | null;
   sex?: string | null;
 }
 
