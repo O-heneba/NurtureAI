@@ -52,7 +52,10 @@ export async function assignRole(user_id: string, role: Database["public"]["Enum
   return data as UserRoleRow;
 }
 
-export async function removeRole(user_id: string, role: string) {
+export async function removeRole(
+  user_id: string,
+  role: "chps_worker" | "supervisor" | "administrator",
+) {
   const { error } = await supabaseAdmin
     .from("user_roles")
     .delete()

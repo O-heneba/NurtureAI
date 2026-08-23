@@ -385,7 +385,11 @@ function ReferralDetail() {
                   onClick={() =>
                     navigate({
                       to: "/followup/new",
-                      search: { referral_id: row.id, person_id: row.person_id ?? undefined },
+                      search: {
+                        referral_id: row.id,
+                        person_id: row.person_id ?? undefined,
+                        assessment_id: undefined,
+                      },
                     })
                   }
                 >

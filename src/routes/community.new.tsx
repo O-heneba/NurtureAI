@@ -182,15 +182,23 @@ function NewCommunity() {
     try {
       const record = await insertCommunity({
         name: form.name,
+        community_code: form.communityCode || null,
         region: form.region || null,
         district: form.district || null,
         sub_district: form.subDistrict || null,
+        chps_zone: form.chpsZone || null,
+        chps_facility_id: form.chpsFacility || null,
+        supervisor_id: form.supervisor || null,
+        nearest_referral_facility_id: form.nearestFacility || null,
         gps_lat: form.gpsLat ? Number(form.gpsLat) : null,
         gps_lng: form.gpsLng ? Number(form.gpsLng) : null,
-        chps_facility: form.chpsFacility || null,
-        population: Number(form.population || 0) || null,
-        notes: form.notes || null,
         location_desc: form.locationDesc || null,
+        primary_languages: form.primaryLanguages.length ? form.primaryLanguages : [],
+        common_health_challenges: form.commonHealthChallenges.length
+          ? form.commonHealthChallenges
+          : [],
+        accessibility: form.accessibility || null,
+        notes: form.notes || null,
         status: form.status || null,
       });
       toast.success(`Community ${form.name} saved`);

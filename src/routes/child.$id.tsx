@@ -72,7 +72,7 @@ function ChildProfile() {
           label="Profile"
           value={childPerson.sex || "Unknown"}
           icon={<Baby className="h-4 w-4" />}
-          tone="secondary"
+          tone="info"
         />
       </div>
 

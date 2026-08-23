@@ -323,21 +323,27 @@ export async function getHousehold(id: string): Promise<{
 export async function getCommunity(id: string): Promise<{
   id: string;
   name: string;
+  community_code: string | null;
   region: string | null;
   district: string | null;
   sub_district: string | null;
+  chps_zone: string | null;
+  chps_facility_id: string | null;
+  supervisor_id: string | null;
+  nearest_referral_facility_id: string | null;
   gps_lat: number | null;
   gps_lng: number | null;
   location_desc: string | null;
-  population: number | null;
-  chps_facility: string | null;
+  primary_languages: string[] | null;
+  common_health_challenges: string[] | null;
+  accessibility: string | null;
   notes: string | null;
   status: string | null;
 } | null> {
   const { data, error } = await db
     .from("communities")
     .select(
-      "id, name, region, district, sub_district, gps_lat, gps_lng, location_desc, population, chps_facility, notes, status",
+      "id, name, community_code, region, district, sub_district, chps_zone, chps_facility_id, supervisor_id, nearest_referral_facility_id, gps_lat, gps_lng, location_desc, primary_languages, common_health_challenges, accessibility, notes, status",
     )
     .eq("id", id)
     .maybeSingle();
@@ -347,15 +353,21 @@ export async function getCommunity(id: string): Promise<{
 
 export async function insertCommunity(v: {
   name: string;
+  community_code?: string | null;
   region?: string | null;
   district?: string | null;
   sub_district?: string | null;
+  chps_zone?: string | null;
+  chps_facility_id?: string | null;
+  supervisor_id?: string | null;
+  nearest_referral_facility_id?: string | null;
   gps_lat?: number | null;
   gps_lng?: number | null;
-  chps_facility?: string | null;
-  population?: number | null;
-  notes?: string | null;
   location_desc?: string | null;
+  primary_languages?: string[] | null;
+  common_health_challenges?: string[] | null;
+  accessibility?: string | null;
+  notes?: string | null;
   status?: string | null;
 }) {
   const created_by = await uid();

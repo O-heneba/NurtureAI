@@ -74,7 +74,7 @@ function FollowUpsPage() {
         description="Care continuity — track and complete home visits, phone calls, and referral follow-ups"
         icon={<CalendarCheck className="h-5 w-5" />}
         actions={
-          <Link to="/followup/new">
+          <Link to="/followup/new" search={{ person_id: undefined, referral_id: undefined, assessment_id: undefined }}>
             <Button>
               <Plus className="h-4 w-4 mr-1" /> New follow-up
             </Button>
@@ -112,7 +112,7 @@ function FollowUpsPage() {
           title="No follow-ups"
           description="Schedule a new follow-up or change the scope filter."
           action={
-            <Link to="/followup/new">
+            <Link to="/followup/new" search={{ person_id: undefined, referral_id: undefined, assessment_id: undefined }}>
               <Button>
                 <Plus className="h-4 w-4 mr-1" /> New follow-up
               </Button>

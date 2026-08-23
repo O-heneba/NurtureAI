@@ -183,7 +183,7 @@ function NavItemWithSubmenu({
 }: {
   label: string;
   icon: typeof LayoutDashboard;
-  submenu: Array<{ to: string; label: string }>;
+  submenu: ReadonlyArray<{ to: string; label: string }>;
   pathname: string;
   to?: string;
   onClick?: () => void;

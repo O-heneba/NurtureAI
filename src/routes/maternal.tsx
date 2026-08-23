@@ -29,7 +29,7 @@ function Maternal() {
 
   useEffect(() => {
     listPregnancies()
-      .then(setPregnancies)
+      .then((rows) => setPregnancies(rows.map((row) => ({ ...row, gravida: null }))))
       .catch(() => setPregnancies([]))
       .finally(() => setLoading(false));
   }, []);

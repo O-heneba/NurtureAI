@@ -131,7 +131,11 @@ function AssessmentDetail() {
               onClick={() =>
                 navigate({
                   to: "/followup/new",
-                  search: { assessment_id: row.id, person_id: row.person_id ?? undefined },
+                  search: {
+                    assessment_id: row.id,
+                    person_id: row.person_id ?? undefined,
+                    referral_id: undefined,
+                  },
                 })
               }
             >

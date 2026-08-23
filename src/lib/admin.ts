@@ -42,7 +42,10 @@ export async function assignRole(
   return data;
 }
 
-export async function removeRole(user_id: string, role: string) {
+export async function removeRole(
+  user_id: string,
+  role: "chps_worker" | "supervisor" | "administrator",
+) {
   const { data, error } = await supabase
     .from("user_roles")
     .delete()

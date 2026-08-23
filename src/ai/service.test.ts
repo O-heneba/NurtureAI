@@ -8,7 +8,7 @@ function provider(overrides: Partial<AIProvider> = {}): AIProvider {
     modelId: "test-model",
     initialize: vi.fn(async () => undefined),
     isAvailable: vi.fn(async () => true),
-    generate: vi.fn(async () => ({ text: "response", provider: "local", modelId: "test-model" })),
+    generate: vi.fn(async () => ({ text: "response", provider: "local" as const, modelId: "test-model" })),
     stream: vi.fn(async (_request, onToken) => onToken("response")),
     cancel: vi.fn(),
     ...overrides,
@@ -32,7 +32,7 @@ describe("AI service contract", () => {
     const selected = provider({ isAvailable: vi.fn(async () => false) });
     const service = createAIService(selected);
 
-    await expect(service.initialize()).rejects.toMatchObject<AIError>({ code: "unsupported" });
+    await expect(service.initialize()).rejects.toMatchObject({ code: "unsupported" } satisfies Partial<AIError>);
     expect(service.getState().status).toBe("unavailable");
     expect(selected.generate).not.toHaveBeenCalled();
   });

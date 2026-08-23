@@ -168,7 +168,7 @@ function NewFollowUp() {
         icon={<CalendarCheck className="h-5 w-5" />}
         breadcrumbs={[{ label: "Follow-ups", to: "/followups" }, { label: "New" }]}
         actions={
-          <Link to="/followups">
+          <Link to="/followups" search={{ scope: "all" }}>
             <Button variant="outline">
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back

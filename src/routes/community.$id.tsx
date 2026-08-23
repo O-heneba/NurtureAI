@@ -41,7 +41,7 @@ function CommunityDetail() {
         description={`${c.district ?? "Unknown district"} · ${c.region ?? "Unknown region"}`}
         icon={<MapPin className="h-5 w-5" />}
         breadcrumbs={[{ label: "Communities", to: "/communities" }, { label: c.name }]}
-        actions={<Badge variant="outline">{c.chps_facility || "CHPS facility"}</Badge>}
+        actions={<Badge variant="outline">{c.chps_facility_id || "CHPS facility"}</Badge>}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 mb-6">
@@ -57,12 +57,12 @@ function CommunityDetail() {
               <span className="font-medium text-foreground">Region:</span> {c.region || "N/A"}
             </div>
             <div>
-              <span className="font-medium text-foreground">Facility:</span>{" "}
-              {c.chps_facility || "Not specified"}
+              <span className="font-medium text-foreground">Facility ID:</span>{" "}
+              {c.chps_facility_id || "Not specified"}
             </div>
             <div>
-              <span className="font-medium text-foreground">Population:</span>{" "}
-              {c.population ?? "N/A"}
+              <span className="font-medium text-foreground">Community code:</span>{" "}
+              {c.community_code || "N/A"}
             </div>
             <div>
               <span className="font-medium text-foreground">Notes:</span>{" "}

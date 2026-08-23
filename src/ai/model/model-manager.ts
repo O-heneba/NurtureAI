@@ -61,8 +61,10 @@ export async function loadModel(onProgress?: (progress: number) => void): Promis
         device,
         dtype: "q4",
         revision: AI_MODEL.revision,
-        progress_callback: (event: { progress?: number }) => {
-          if (typeof event.progress === "number") onProgress(Math.round(event.progress));
+        progress_callback: (event) => {
+          if ("progress" in event && typeof event.progress === "number") {
+            onProgress?.(Math.round(event.progress));
+          }
         },
       });
       generator = pipe as unknown as TextGenerator;

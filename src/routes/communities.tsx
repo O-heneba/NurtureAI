@@ -22,17 +22,37 @@ import {
   Plus,
   TrendingUp,
   ShieldAlert,
+  Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { listCommunities } from "@/lib/registrations";
 import { useAuth } from "@/hooks/use-auth";
+
+type CommunitySummary = {
+  id: string;
+  name: string;
+  district: string | null;
+  region: string | null;
+  chpsZone: string | null;
+  worker: string | null;
+  status: string | null;
+  population: number;
+  coverage: number;
+  households: number;
+  pregnant: number;
+  under5: number;
+  highRisk: number;
+  dataCoverageIncomplete: boolean;
+  subDistrict: string | null;
+};
 
 export const Route = createFileRoute("/communities")({
   component: Communities,
 });
 
 function Communities() {
-  const { roles, profile } = useAuth();
+  const { roles } = useAuth();
+  const [communities, setCommunities] = useState<CommunitySummary[]>([]);
   const [q, setQ] = useState("");
   const [district, setDistrict] = useState<string>("all");
   const [region, setRegion] = useState<string>("all");
@@ -40,33 +60,53 @@ function Communities() {
   const [status, setStatus] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"coverage" | "population" | "name">("coverage");
 
-  // Filter communities based on user role
+  useEffect(() => {
+    listCommunities()
+      .then((rows) =>
+        setCommunities(
+          rows.map((row) => ({
+            id: row.id,
+            name: row.name,
+            district: null,
+            region: null,
+            chpsZone: null,
+            worker: null,
+            status: "active",
+            population: 0,
+            coverage: 0,
+            households: 0,
+            pregnant: 0,
+            under5: 0,
+            highRisk: 0,
+            dataCoverageIncomplete: false,
+            subDistrict: null,
+          })),
+        ),
+      )
+      .catch(() => setCommunities([]));
+  }, []);
+
   const accessibleCommunities = useMemo(() => {
-    if (roles.includes("administrator")) return communities;
-    if (roles.includes("supervisor"))
-      return communities.filter((c) => c.chpsZone === profile?.zone);
-    if (roles.includes("chps_worker"))
-      return communities.filter((c) => c.worker === profile?.full_name);
-    return [];
-  }, [roles, profile?.zone, profile?.full_name]);
+    if (!roles.length) return [];
+    return communities;
+  }, [communities, roles]);
 
   const allDistricts = useMemo(
-    () => Array.from(new Set(accessibleCommunities.map((c) => c.district))),
+    () => Array.from(new Set(accessibleCommunities.map((c) => c.district).filter(Boolean))) as string[],
     [accessibleCommunities],
   );
   const allRegions = useMemo(
-    () => Array.from(new Set(accessibleCommunities.map((c) => c.region))),
+    () => Array.from(new Set(accessibleCommunities.map((c) => c.region).filter(Boolean))) as string[],
     [accessibleCommunities],
   );
   const allChpsZones = useMemo(
-    () => Array.from(new Set(accessibleCommunities.map((c) => c.chpsZone))),
+    () => Array.from(new Set(accessibleCommunities.map((c) => c.chpsZone).filter(Boolean))) as string[],
     [accessibleCommunities],
   );
 
   const filtered = useMemo(() => {
     const next = accessibleCommunities.filter((c) => {
-      const haystack =
-        `${c.name} ${c.district} ${c.subDistrict} ${c.chpsZone} ${c.worker}`.toLowerCase();
+      const haystack = `${c.name} ${c.district ?? ""} ${c.subDistrict ?? ""} ${c.chpsZone ?? ""} ${c.worker ?? ""}`.toLowerCase();
       const matchesQuery = haystack.includes(q.toLowerCase());
       const matchesDistrict = district === "all" || c.district === district;
       const matchesRegion = region === "all" || c.region === region;

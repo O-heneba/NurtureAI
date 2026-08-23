@@ -189,7 +189,7 @@ function FollowUpDetail() {
         <EmptyState
           title="Follow-up not found"
           action={
-            <Link to="/followups">
+            <Link to="/followups" search={{ scope: "all" }}>
               <Button>Back</Button>
             </Link>
           }

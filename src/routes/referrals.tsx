@@ -77,7 +77,7 @@ function Referrals() {
         description="Track patients referred to higher-level facilities"
         icon={<Send className="h-5 w-5" />}
         actions={
-          <Link to="/referral/new">
+          <Link to="/referral/new" search={{ person_id: undefined, assessment_id: undefined }}>
             <Button className="rounded-xl">
               <Plus className="mr-1 h-4 w-4" /> New referral
             </Button>
@@ -141,7 +141,7 @@ function Referrals() {
           title="No referrals found"
           description="Create the first referral for a person in your caseload."
           action={
-            <Link to="/referral/new">
+            <Link to="/referral/new" search={{ person_id: undefined, assessment_id: undefined }}>
               <Button>
                 <Plus className="h-4 w-4 mr-1" /> New referral
               </Button>
