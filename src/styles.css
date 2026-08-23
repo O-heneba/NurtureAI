@@ -155,7 +155,10 @@
     letter-spacing: -0.005em;
   }
 
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     letter-spacing: -0.02em;
   }
 
@@ -166,8 +169,13 @@
   }
 
   /* Slim, modern scrollbar */
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
   ::-webkit-scrollbar-thumb {
     background: color-mix(in oklab, var(--color-muted-foreground) 25%, transparent);
     border-radius: 999px;
@@ -181,8 +189,12 @@
   }
 
   /* Recharts polish */
-  .recharts-cartesian-axis-tick text { fill: var(--color-muted-foreground); }
-  .recharts-tooltip-wrapper:focus { outline: none; }
+  .recharts-cartesian-axis-tick text {
+    fill: var(--color-muted-foreground);
+  }
+  .recharts-tooltip-wrapper:focus {
+    outline: none;
+  }
   .recharts-default-tooltip {
     border-radius: 12px !important;
     border: 1px solid var(--color-border) !important;
@@ -191,16 +203,31 @@
 }
 
 @keyframes page-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes shimmer {
-  0% { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
 }
 @keyframes float-slow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 @utility animate-page-in {
@@ -225,7 +252,9 @@
     0 4px 16px -4px color-mix(in oklab, var(--color-foreground) 6%, transparent);
 }
 @utility hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   &:hover {
     transform: translateY(-2px);
     box-shadow:

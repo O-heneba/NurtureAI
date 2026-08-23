@@ -9,7 +9,12 @@ export interface AuthState {
   user: User | null;
   loading: boolean;
   roles: Role[];
-  profile: { full_name: string | null; facility: string | null; phone: string | null; avatar_url: string | null } | null;
+  profile: {
+    full_name: string | null;
+    facility: string | null;
+    phone: string | null;
+    avatar_url: string | null;
+  } | null;
 }
 
 export function useAuth(): AuthState & { signOut: () => Promise<void> } {
@@ -28,7 +33,10 @@ export function useAuth(): AuthState & { signOut: () => Promise<void> } {
       const client = supabase as unknown as {
         from: (t: string) => {
           select: (c: string) => {
-            eq: (k: string, v: string) => Promise<{ data: unknown }> & {
+            eq: (
+              k: string,
+              v: string,
+            ) => Promise<{ data: unknown }> & {
               maybeSingle: () => Promise<{ data: unknown }>;
             };
           };
@@ -36,10 +44,19 @@ export function useAuth(): AuthState & { signOut: () => Promise<void> } {
       };
       const [{ data: roleRowsRaw }, { data: profRaw }] = await Promise.all([
         client.from("user_roles").select("role").eq("user_id", userId),
-        client.from("profiles").select("full_name, facility, phone, avatar_url").eq("id", userId).maybeSingle(),
+        client
+          .from("profiles")
+          .select("full_name, facility, phone, avatar_url")
+          .eq("id", userId)
+          .maybeSingle(),
       ]);
       const roleRows = roleRowsRaw as Array<{ role: Role }> | null;
-      const prof = profRaw as { full_name: string | null; facility: string | null; phone: string | null; avatar_url: string | null } | null;
+      const prof = profRaw as {
+        full_name: string | null;
+        facility: string | null;
+        phone: string | null;
+        avatar_url: string | null;
+      } | null;
       if (!mounted) return;
       setState((s) => ({
         ...s,
@@ -59,7 +76,12 @@ export function useAuth(): AuthState & { signOut: () => Promise<void> } {
 
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
-      setState((s) => ({ ...s, session: data.session, user: data.session?.user ?? null, loading: false }));
+      setState((s) => ({
+        ...s,
+        session: data.session,
+        user: data.session?.user ?? null,
+        loading: false,
+      }));
       if (data.session?.user) loadExtras(data.session.user.id);
     });
 

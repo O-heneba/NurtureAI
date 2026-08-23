@@ -13,8 +13,15 @@ async function uid(): Promise<string> {
 
 export type Urgency = "routine" | "priority" | "urgent" | "emergency";
 export type ReferralStatus =
-  | "draft" | "submitted" | "acknowledged" | "accepted"
-  | "in_progress" | "completed" | "declined" | "cancelled" | "pending";
+  | "draft"
+  | "submitted"
+  | "acknowledged"
+  | "accepted"
+  | "in_progress"
+  | "completed"
+  | "declined"
+  | "cancelled"
+  | "pending";
 
 export interface FacilityRow {
   id: string;
@@ -70,7 +77,9 @@ export async function listFacilities(): Promise<FacilityRow[]> {
 }
 
 export async function listReferrals(filter?: {
-  status?: ReferralStatus | "all"; urgency?: Urgency | "all"; person_id?: string;
+  status?: ReferralStatus | "all";
+  urgency?: Urgency | "all";
+  person_id?: string;
 }): Promise<ReferralRow[]> {
   let q = db.from("referrals").select("*").order("created_at", { ascending: false }).limit(200);
   if (filter?.status && filter.status !== "all") q = q.eq("status", filter.status);
@@ -88,15 +97,28 @@ export async function getReferral(id: string): Promise<ReferralRow | null> {
 }
 
 export async function listReferralHistory(referral_id: string) {
-  const { data, error } = await db.from("referral_status_history")
-    .select("*").eq("referral_id", referral_id).order("at", { ascending: true });
+  const { data, error } = await db
+    .from("referral_status_history")
+    .select("*")
+    .eq("referral_id", referral_id)
+    .order("at", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as Array<{ id: string; from_status: string | null; to_status: string; note: string | null; at: string; actor: string | null }>;
+  return (data ?? []) as Array<{
+    id: string;
+    from_status: string | null;
+    to_status: string;
+    note: string | null;
+    at: string;
+    actor: string | null;
+  }>;
 }
 
 export async function getReferralOutcome(referral_id: string): Promise<ReferralOutcome | null> {
-  const { data, error } = await db.from("referral_outcomes")
-    .select("*").eq("referral_id", referral_id).maybeSingle();
+  const { data, error } = await db
+    .from("referral_outcomes")
+    .select("*")
+    .eq("referral_id", referral_id)
+    .maybeSingle();
   if (error) throw error;
   return data ?? null;
 }
@@ -137,13 +159,19 @@ export async function createReferral(v: {
   const { data, error } = await db.from("referrals").insert(payload).select("*").single();
   if (error) throw error;
   await db.from("referral_status_history").insert({
-    referral_id: data.id, from_status: null, to_status: status, actor, note: v.submit ? "Referral submitted" : "Referral drafted",
+    referral_id: data.id,
+    from_status: null,
+    to_status: status,
+    actor,
+    note: v.submit ? "Referral submitted" : "Referral drafted",
   });
   return data as ReferralRow;
 }
 
 export async function updateReferralStatus(
-  id: string, to: ReferralStatus, note?: string,
+  id: string,
+  to: ReferralStatus,
+  note?: string,
 ): Promise<ReferralRow> {
   const actor = await uid();
   const cur = await getReferral(id);
@@ -153,10 +181,19 @@ export async function updateReferralStatus(
   if (to === "submitted" && !cur.submitted_at) patch.submitted_at = now;
   if (to === "acknowledged" && !cur.acknowledged_at) patch.acknowledged_at = now;
   if (to === "completed" && !cur.completed_at) patch.completed_at = now;
-  const { data, error } = await db.from("referrals").update(patch).eq("id", id).select("*").single();
+  const { data, error } = await db
+    .from("referrals")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
   if (error) throw error;
   await db.from("referral_status_history").insert({
-    referral_id: id, from_status: cur.status, to_status: to, actor, note: note ?? null,
+    referral_id: id,
+    from_status: cur.status,
+    to_status: to,
+    actor,
+    note: note ?? null,
   });
   return data as ReferralRow;
 }
@@ -187,7 +224,12 @@ export async function recordReferralOutcome(v: {
     recorded_by: actor,
   };
   if (existing) {
-    const { data, error } = await db.from("referral_outcomes").update(payload).eq("id", existing.id).select("*").single();
+    const { data, error } = await db
+      .from("referral_outcomes")
+      .update(payload)
+      .eq("id", existing.id)
+      .select("*")
+      .single();
     if (error) throw error;
     return data as ReferralOutcome;
   }

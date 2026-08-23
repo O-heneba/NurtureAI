@@ -13,6 +13,13 @@ import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
+function registerOfflineShell() {
+  if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
+  void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((error) => {
+    console.error("[PWA] Service worker registration failed", error);
+  });
+}
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -79,10 +86,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "NurtureAI — Community Health Platform for CHPS Workers" },
-      { name: "description", content: "AI-powered community health platform for CHPS workers in Ghana. Register households, manage maternal and child health, and get AI-assisted assessments." },
+      {
+        name: "description",
+        content:
+          "AI-powered community health platform for CHPS workers in Ghana. Register households, manage maternal and child health, and get AI-assisted assessments.",
+      },
       { name: "author", content: "NurtureAI" },
       { property: "og:title", content: "NurtureAI — Community Health Platform" },
-      { property: "og:description", content: "AI-powered health platform built for CHPS workers in Ghana." },
+      {
+        property: "og:description",
+        content: "AI-powered health platform built for CHPS workers in Ghana.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -91,9 +105,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
@@ -119,6 +130,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    registerOfflineShell();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

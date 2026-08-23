@@ -9,118 +9,52 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WelcomeRouteImport } from './routes/welcome'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as ReferralsRouteImport } from './routes/referrals'
-import { Route as PeopleRouteImport } from './routes/people'
-import { Route as NutritionRouteImport } from './routes/nutrition'
-import { Route as MaternalRouteImport } from './routes/maternal'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as HouseholdsRouteImport } from './routes/households'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as FollowupsRouteImport } from './routes/followups'
-import { Route as CommunitiesRouteImport } from './routes/communities'
-import { Route as ChildHealthRouteImport } from './routes/child-health'
-import { Route as AssistantRouteImport } from './routes/assistant'
-import { Route as AssessmentsRouteImport } from './routes/assessments'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as RegisterPregnancyRouteImport } from './routes/register.pregnancy'
-import { Route as RegisterPersonRouteImport } from './routes/register.person'
-import { Route as RegisterHouseholdRouteImport } from './routes/register.household'
-import { Route as RegisterChildRouteImport } from './routes/register.child'
-import { Route as ReferralNewRouteImport } from './routes/referral.new'
-import { Route as ReferralIdRouteImport } from './routes/referral.$id'
-import { Route as PregnancyIdRouteImport } from './routes/pregnancy.$id'
-import { Route as PersonIdRouteImport } from './routes/person.$id'
-import { Route as HouseholdIdRouteImport } from './routes/household.$id'
-import { Route as FollowupNewRouteImport } from './routes/followup.new'
-import { Route as FollowupIdRouteImport } from './routes/followup.$id'
-import { Route as CommunityIdRouteImport } from './routes/community.$id'
-import { Route as ChildIdRouteImport } from './routes/child.$id'
-import { Route as AssessmentNewRouteImport } from './routes/assessment.new'
+import { Route as AssessmentsRouteImport } from './routes/assessments'
+import { Route as AssistantRouteImport } from './routes/assistant'
+import { Route as ChildHealthRouteImport } from './routes/child-health'
+import { Route as CommunitiesRouteImport } from './routes/communities'
+import { Route as FollowupsRouteImport } from './routes/followups'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as HouseholdsRouteImport } from './routes/households'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MaternalRouteImport } from './routes/maternal'
+import { Route as NutritionRouteImport } from './routes/nutrition'
+import { Route as PeopleRouteImport } from './routes/people'
+import { Route as ReferralsRouteImport } from './routes/referrals'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin/analytics'
+import { Route as AdminAssessmentTypesRouteImport } from './routes/admin/assessment-types'
+import { Route as AdminAuditLogsRouteImport } from './routes/admin/audit-logs'
+import { Route as AdminFacilitiesRouteImport } from './routes/admin/facilities'
+import { Route as AdminGeographyRouteImport } from './routes/admin/geography'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AssessmentIdRouteImport } from './routes/assessment.$id'
+import { Route as AssessmentNewRouteImport } from './routes/assessment.new'
+import { Route as ChildIdRouteImport } from './routes/child.$id'
+import { Route as CommunityIdRouteImport } from './routes/community.$id'
+import { Route as CommunityNewRouteImport } from './routes/community.new'
+import { Route as DevAiRouteImport } from './routes/dev.ai'
+import { Route as FollowupIdRouteImport } from './routes/followup.$id'
+import { Route as FollowupNewRouteImport } from './routes/followup.new'
+import { Route as HouseholdIdRouteImport } from './routes/household.$id'
+import { Route as PersonIdRouteImport } from './routes/person.$id'
+import { Route as PregnancyIdRouteImport } from './routes/pregnancy.$id'
+import { Route as ReferralIdRouteImport } from './routes/referral.$id'
+import { Route as ReferralNewRouteImport } from './routes/referral.new'
+import { Route as RegisterChildRouteImport } from './routes/register.child'
+import { Route as RegisterHouseholdRouteImport } from './routes/register.household'
+import { Route as RegisterPersonRouteImport } from './routes/register.person'
+import { Route as RegisterPregnancyRouteImport } from './routes/register.pregnancy'
 
-const WelcomeRoute = WelcomeRouteImport.update({
-  id: '/welcome',
-  path: '/welcome',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReferralsRoute = ReferralsRouteImport.update({
-  id: '/referrals',
-  path: '/referrals',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PeopleRoute = PeopleRouteImport.update({
-  id: '/people',
-  path: '/people',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NutritionRoute = NutritionRouteImport.update({
-  id: '/nutrition',
-  path: '/nutrition',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MaternalRoute = MaternalRouteImport.update({
-  id: '/maternal',
-  path: '/maternal',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HouseholdsRoute = HouseholdsRouteImport.update({
-  id: '/households',
-  path: '/households',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FollowupsRoute = FollowupsRouteImport.update({
-  id: '/followups',
-  path: '/followups',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CommunitiesRoute = CommunitiesRouteImport.update({
-  id: '/communities',
-  path: '/communities',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChildHealthRoute = ChildHealthRouteImport.update({
-  id: '/child-health',
-  path: '/child-health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AssistantRoute = AssistantRouteImport.update({
-  id: '/assistant',
-  path: '/assistant',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssessmentsRoute = AssessmentsRouteImport.update({
@@ -128,74 +62,124 @@ const AssessmentsRoute = AssessmentsRouteImport.update({
   path: '/assessments',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AssistantRoute = AssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterPregnancyRoute = RegisterPregnancyRouteImport.update({
-  id: '/register/pregnancy',
-  path: '/register/pregnancy',
+const ChildHealthRoute = ChildHealthRouteImport.update({
+  id: '/child-health',
+  path: '/child-health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterPersonRoute = RegisterPersonRouteImport.update({
-  id: '/register/person',
-  path: '/register/person',
+const CommunitiesRoute = CommunitiesRouteImport.update({
+  id: '/communities',
+  path: '/communities',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterHouseholdRoute = RegisterHouseholdRouteImport.update({
-  id: '/register/household',
-  path: '/register/household',
+const FollowupsRoute = FollowupsRouteImport.update({
+  id: '/followups',
+  path: '/followups',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterChildRoute = RegisterChildRouteImport.update({
-  id: '/register/child',
-  path: '/register/child',
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ReferralNewRoute = ReferralNewRouteImport.update({
-  id: '/referral/new',
-  path: '/referral/new',
+const HouseholdsRoute = HouseholdsRouteImport.update({
+  id: '/households',
+  path: '/households',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ReferralIdRoute = ReferralIdRouteImport.update({
-  id: '/referral/$id',
-  path: '/referral/$id',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PregnancyIdRoute = PregnancyIdRouteImport.update({
-  id: '/pregnancy/$id',
-  path: '/pregnancy/$id',
+const MaternalRoute = MaternalRouteImport.update({
+  id: '/maternal',
+  path: '/maternal',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PersonIdRoute = PersonIdRouteImport.update({
-  id: '/person/$id',
-  path: '/person/$id',
+const NutritionRoute = NutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HouseholdIdRoute = HouseholdIdRouteImport.update({
-  id: '/household/$id',
-  path: '/household/$id',
+const PeopleRoute = PeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FollowupNewRoute = FollowupNewRouteImport.update({
-  id: '/followup/new',
-  path: '/followup/new',
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FollowupIdRoute = FollowupIdRouteImport.update({
-  id: '/followup/$id',
-  path: '/followup/$id',
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CommunityIdRoute = CommunityIdRouteImport.update({
-  id: '/community/$id',
-  path: '/community/$id',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ChildIdRoute = ChildIdRouteImport.update({
-  id: '/child/$id',
-  path: '/child/$id',
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/admin/analytics',
+  path: '/admin/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAssessmentTypesRoute = AdminAssessmentTypesRouteImport.update({
+  id: '/admin/assessment-types',
+  path: '/admin/assessment-types',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAuditLogsRoute = AdminAuditLogsRouteImport.update({
+  id: '/admin/audit-logs',
+  path: '/admin/audit-logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminFacilitiesRoute = AdminFacilitiesRouteImport.update({
+  id: '/admin/facilities',
+  path: '/admin/facilities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminGeographyRoute = AdminGeographyRouteImport.update({
+  id: '/admin/geography',
+  path: '/admin/geography',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssessmentIdRoute = AssessmentIdRouteImport.update({
+  id: '/assessment/$id',
+  path: '/assessment/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssessmentNewRoute = AssessmentNewRouteImport.update({
@@ -203,9 +187,79 @@ const AssessmentNewRoute = AssessmentNewRouteImport.update({
   path: '/assessment/new',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AssessmentIdRoute = AssessmentIdRouteImport.update({
-  id: '/assessment/$id',
-  path: '/assessment/$id',
+const ChildIdRoute = ChildIdRouteImport.update({
+  id: '/child/$id',
+  path: '/child/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityIdRoute = CommunityIdRouteImport.update({
+  id: '/community/$id',
+  path: '/community/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityNewRoute = CommunityNewRouteImport.update({
+  id: '/community/new',
+  path: '/community/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevAiRoute = DevAiRouteImport.update({
+  id: '/dev/ai',
+  path: '/dev/ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FollowupIdRoute = FollowupIdRouteImport.update({
+  id: '/followup/$id',
+  path: '/followup/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FollowupNewRoute = FollowupNewRouteImport.update({
+  id: '/followup/new',
+  path: '/followup/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HouseholdIdRoute = HouseholdIdRouteImport.update({
+  id: '/household/$id',
+  path: '/household/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PersonIdRoute = PersonIdRouteImport.update({
+  id: '/person/$id',
+  path: '/person/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PregnancyIdRoute = PregnancyIdRouteImport.update({
+  id: '/pregnancy/$id',
+  path: '/pregnancy/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralIdRoute = ReferralIdRouteImport.update({
+  id: '/referral/$id',
+  path: '/referral/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralNewRoute = ReferralNewRouteImport.update({
+  id: '/referral/new',
+  path: '/referral/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterChildRoute = RegisterChildRouteImport.update({
+  id: '/register/child',
+  path: '/register/child',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterHouseholdRoute = RegisterHouseholdRouteImport.update({
+  id: '/register/household',
+  path: '/register/household',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterPersonRoute = RegisterPersonRouteImport.update({
+  id: '/register/person',
+  path: '/register/person',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterPregnancyRoute = RegisterPregnancyRouteImport.update({
+  id: '/register/pregnancy',
+  path: '/register/pregnancy',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -228,10 +282,18 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/assessment-types': typeof AdminAssessmentTypesRoute
+  '/admin/audit-logs': typeof AdminAuditLogsRoute
+  '/admin/facilities': typeof AdminFacilitiesRoute
+  '/admin/geography': typeof AdminGeographyRoute
+  '/admin/users': typeof AdminUsersRoute
   '/assessment/$id': typeof AssessmentIdRoute
   '/assessment/new': typeof AssessmentNewRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
+  '/community/new': typeof CommunityNewRoute
+  '/dev/ai': typeof DevAiRoute
   '/followup/$id': typeof FollowupIdRoute
   '/followup/new': typeof FollowupNewRoute
   '/household/$id': typeof HouseholdIdRoute
@@ -243,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/register/household': typeof RegisterHouseholdRoute
   '/register/person': typeof RegisterPersonRoute
   '/register/pregnancy': typeof RegisterPregnancyRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -263,10 +326,18 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/assessment-types': typeof AdminAssessmentTypesRoute
+  '/admin/audit-logs': typeof AdminAuditLogsRoute
+  '/admin/facilities': typeof AdminFacilitiesRoute
+  '/admin/geography': typeof AdminGeographyRoute
+  '/admin/users': typeof AdminUsersRoute
   '/assessment/$id': typeof AssessmentIdRoute
   '/assessment/new': typeof AssessmentNewRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
+  '/community/new': typeof CommunityNewRoute
+  '/dev/ai': typeof DevAiRoute
   '/followup/$id': typeof FollowupIdRoute
   '/followup/new': typeof FollowupNewRoute
   '/household/$id': typeof HouseholdIdRoute
@@ -278,6 +349,7 @@ export interface FileRoutesByTo {
   '/register/household': typeof RegisterHouseholdRoute
   '/register/person': typeof RegisterPersonRoute
   '/register/pregnancy': typeof RegisterPregnancyRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -299,10 +371,18 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/assessment-types': typeof AdminAssessmentTypesRoute
+  '/admin/audit-logs': typeof AdminAuditLogsRoute
+  '/admin/facilities': typeof AdminFacilitiesRoute
+  '/admin/geography': typeof AdminGeographyRoute
+  '/admin/users': typeof AdminUsersRoute
   '/assessment/$id': typeof AssessmentIdRoute
   '/assessment/new': typeof AssessmentNewRoute
   '/child/$id': typeof ChildIdRoute
   '/community/$id': typeof CommunityIdRoute
+  '/community/new': typeof CommunityNewRoute
+  '/dev/ai': typeof DevAiRoute
   '/followup/$id': typeof FollowupIdRoute
   '/followup/new': typeof FollowupNewRoute
   '/household/$id': typeof HouseholdIdRoute
@@ -314,6 +394,7 @@ export interface FileRoutesById {
   '/register/household': typeof RegisterHouseholdRoute
   '/register/person': typeof RegisterPersonRoute
   '/register/pregnancy': typeof RegisterPregnancyRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -336,10 +417,18 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/welcome'
+    | '/admin/analytics'
+    | '/admin/assessment-types'
+    | '/admin/audit-logs'
+    | '/admin/facilities'
+    | '/admin/geography'
+    | '/admin/users'
     | '/assessment/$id'
     | '/assessment/new'
     | '/child/$id'
     | '/community/$id'
+    | '/community/new'
+    | '/dev/ai'
     | '/followup/$id'
     | '/followup/new'
     | '/household/$id'
@@ -351,6 +440,7 @@ export interface FileRouteTypes {
     | '/register/household'
     | '/register/person'
     | '/register/pregnancy'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -371,10 +461,18 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/welcome'
+    | '/admin/analytics'
+    | '/admin/assessment-types'
+    | '/admin/audit-logs'
+    | '/admin/facilities'
+    | '/admin/geography'
+    | '/admin/users'
     | '/assessment/$id'
     | '/assessment/new'
     | '/child/$id'
     | '/community/$id'
+    | '/community/new'
+    | '/dev/ai'
     | '/followup/$id'
     | '/followup/new'
     | '/household/$id'
@@ -386,6 +484,7 @@ export interface FileRouteTypes {
     | '/register/household'
     | '/register/person'
     | '/register/pregnancy'
+    | '/admin'
   id:
     | '__root__'
     | '/'
@@ -406,10 +505,18 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/welcome'
+    | '/admin/analytics'
+    | '/admin/assessment-types'
+    | '/admin/audit-logs'
+    | '/admin/facilities'
+    | '/admin/geography'
+    | '/admin/users'
     | '/assessment/$id'
     | '/assessment/new'
     | '/child/$id'
     | '/community/$id'
+    | '/community/new'
+    | '/dev/ai'
     | '/followup/$id'
     | '/followup/new'
     | '/household/$id'
@@ -421,6 +528,7 @@ export interface FileRouteTypes {
     | '/register/household'
     | '/register/person'
     | '/register/pregnancy'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -442,10 +550,18 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   WelcomeRoute: typeof WelcomeRoute
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminAssessmentTypesRoute: typeof AdminAssessmentTypesRoute
+  AdminAuditLogsRoute: typeof AdminAuditLogsRoute
+  AdminFacilitiesRoute: typeof AdminFacilitiesRoute
+  AdminGeographyRoute: typeof AdminGeographyRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   AssessmentIdRoute: typeof AssessmentIdRoute
   AssessmentNewRoute: typeof AssessmentNewRoute
   ChildIdRoute: typeof ChildIdRoute
   CommunityIdRoute: typeof CommunityIdRoute
+  CommunityNewRoute: typeof CommunityNewRoute
+  DevAiRoute: typeof DevAiRoute
   FollowupIdRoute: typeof FollowupIdRoute
   FollowupNewRoute: typeof FollowupNewRoute
   HouseholdIdRoute: typeof HouseholdIdRoute
@@ -457,120 +573,16 @@ export interface RootRouteChildren {
   RegisterHouseholdRoute: typeof RegisterHouseholdRoute
   RegisterPersonRoute: typeof RegisterPersonRoute
   RegisterPregnancyRoute: typeof RegisterPregnancyRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/welcome': {
-      id: '/welcome'
-      path: '/welcome'
-      fullPath: '/welcome'
-      preLoaderRoute: typeof WelcomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/referrals': {
-      id: '/referrals'
-      path: '/referrals'
-      fullPath: '/referrals'
-      preLoaderRoute: typeof ReferralsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/people': {
-      id: '/people'
-      path: '/people'
-      fullPath: '/people'
-      preLoaderRoute: typeof PeopleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/nutrition': {
-      id: '/nutrition'
-      path: '/nutrition'
-      fullPath: '/nutrition'
-      preLoaderRoute: typeof NutritionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/maternal': {
-      id: '/maternal'
-      path: '/maternal'
-      fullPath: '/maternal'
-      preLoaderRoute: typeof MaternalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/households': {
-      id: '/households'
-      path: '/households'
-      fullPath: '/households'
-      preLoaderRoute: typeof HouseholdsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/followups': {
-      id: '/followups'
-      path: '/followups'
-      fullPath: '/followups'
-      preLoaderRoute: typeof FollowupsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/communities': {
-      id: '/communities'
-      path: '/communities'
-      fullPath: '/communities'
-      preLoaderRoute: typeof CommunitiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/child-health': {
-      id: '/child-health'
-      path: '/child-health'
-      fullPath: '/child-health'
-      preLoaderRoute: typeof ChildHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/assistant': {
-      id: '/assistant'
-      path: '/assistant'
-      fullPath: '/assistant'
-      preLoaderRoute: typeof AssistantRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assessments': {
@@ -580,102 +592,172 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssessmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/assistant': {
+      id: '/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/register/pregnancy': {
-      id: '/register/pregnancy'
-      path: '/register/pregnancy'
-      fullPath: '/register/pregnancy'
-      preLoaderRoute: typeof RegisterPregnancyRouteImport
+    '/child-health': {
+      id: '/child-health'
+      path: '/child-health'
+      fullPath: '/child-health'
+      preLoaderRoute: typeof ChildHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/register/person': {
-      id: '/register/person'
-      path: '/register/person'
-      fullPath: '/register/person'
-      preLoaderRoute: typeof RegisterPersonRouteImport
+    '/communities': {
+      id: '/communities'
+      path: '/communities'
+      fullPath: '/communities'
+      preLoaderRoute: typeof CommunitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/register/household': {
-      id: '/register/household'
-      path: '/register/household'
-      fullPath: '/register/household'
-      preLoaderRoute: typeof RegisterHouseholdRouteImport
+    '/followups': {
+      id: '/followups'
+      path: '/followups'
+      fullPath: '/followups'
+      preLoaderRoute: typeof FollowupsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/register/child': {
-      id: '/register/child'
-      path: '/register/child'
-      fullPath: '/register/child'
-      preLoaderRoute: typeof RegisterChildRouteImport
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/referral/new': {
-      id: '/referral/new'
-      path: '/referral/new'
-      fullPath: '/referral/new'
-      preLoaderRoute: typeof ReferralNewRouteImport
+    '/households': {
+      id: '/households'
+      path: '/households'
+      fullPath: '/households'
+      preLoaderRoute: typeof HouseholdsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/referral/$id': {
-      id: '/referral/$id'
-      path: '/referral/$id'
-      fullPath: '/referral/$id'
-      preLoaderRoute: typeof ReferralIdRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/pregnancy/$id': {
-      id: '/pregnancy/$id'
-      path: '/pregnancy/$id'
-      fullPath: '/pregnancy/$id'
-      preLoaderRoute: typeof PregnancyIdRouteImport
+    '/maternal': {
+      id: '/maternal'
+      path: '/maternal'
+      fullPath: '/maternal'
+      preLoaderRoute: typeof MaternalRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/person/$id': {
-      id: '/person/$id'
-      path: '/person/$id'
-      fullPath: '/person/$id'
-      preLoaderRoute: typeof PersonIdRouteImport
+    '/nutrition': {
+      id: '/nutrition'
+      path: '/nutrition'
+      fullPath: '/nutrition'
+      preLoaderRoute: typeof NutritionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/household/$id': {
-      id: '/household/$id'
-      path: '/household/$id'
-      fullPath: '/household/$id'
-      preLoaderRoute: typeof HouseholdIdRouteImport
+    '/people': {
+      id: '/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof PeopleRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/followup/new': {
-      id: '/followup/new'
-      path: '/followup/new'
-      fullPath: '/followup/new'
-      preLoaderRoute: typeof FollowupNewRouteImport
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/followup/$id': {
-      id: '/followup/$id'
-      path: '/followup/$id'
-      fullPath: '/followup/$id'
-      preLoaderRoute: typeof FollowupIdRouteImport
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/community/$id': {
-      id: '/community/$id'
-      path: '/community/$id'
-      fullPath: '/community/$id'
-      preLoaderRoute: typeof CommunityIdRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/child/$id': {
-      id: '/child/$id'
-      path: '/child/$id'
-      fullPath: '/child/$id'
-      preLoaderRoute: typeof ChildIdRouteImport
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/admin/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/assessment-types': {
+      id: '/admin/assessment-types'
+      path: '/admin/assessment-types'
+      fullPath: '/admin/assessment-types'
+      preLoaderRoute: typeof AdminAssessmentTypesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/audit-logs': {
+      id: '/admin/audit-logs'
+      path: '/admin/audit-logs'
+      fullPath: '/admin/audit-logs'
+      preLoaderRoute: typeof AdminAuditLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/facilities': {
+      id: '/admin/facilities'
+      path: '/admin/facilities'
+      fullPath: '/admin/facilities'
+      preLoaderRoute: typeof AdminFacilitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/geography': {
+      id: '/admin/geography'
+      path: '/admin/geography'
+      fullPath: '/admin/geography'
+      preLoaderRoute: typeof AdminGeographyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assessment/$id': {
+      id: '/assessment/$id'
+      path: '/assessment/$id'
+      fullPath: '/assessment/$id'
+      preLoaderRoute: typeof AssessmentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assessment/new': {
@@ -685,11 +767,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssessmentNewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/assessment/$id': {
-      id: '/assessment/$id'
-      path: '/assessment/$id'
-      fullPath: '/assessment/$id'
-      preLoaderRoute: typeof AssessmentIdRouteImport
+    '/child/$id': {
+      id: '/child/$id'
+      path: '/child/$id'
+      fullPath: '/child/$id'
+      preLoaderRoute: typeof ChildIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community/$id': {
+      id: '/community/$id'
+      path: '/community/$id'
+      fullPath: '/community/$id'
+      preLoaderRoute: typeof CommunityIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community/new': {
+      id: '/community/new'
+      path: '/community/new'
+      fullPath: '/community/new'
+      preLoaderRoute: typeof CommunityNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/ai': {
+      id: '/dev/ai'
+      path: '/dev/ai'
+      fullPath: '/dev/ai'
+      preLoaderRoute: typeof DevAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/followup/$id': {
+      id: '/followup/$id'
+      path: '/followup/$id'
+      fullPath: '/followup/$id'
+      preLoaderRoute: typeof FollowupIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/followup/new': {
+      id: '/followup/new'
+      path: '/followup/new'
+      fullPath: '/followup/new'
+      preLoaderRoute: typeof FollowupNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/household/$id': {
+      id: '/household/$id'
+      path: '/household/$id'
+      fullPath: '/household/$id'
+      preLoaderRoute: typeof HouseholdIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/person/$id': {
+      id: '/person/$id'
+      path: '/person/$id'
+      fullPath: '/person/$id'
+      preLoaderRoute: typeof PersonIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pregnancy/$id': {
+      id: '/pregnancy/$id'
+      path: '/pregnancy/$id'
+      fullPath: '/pregnancy/$id'
+      preLoaderRoute: typeof PregnancyIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referral/$id': {
+      id: '/referral/$id'
+      path: '/referral/$id'
+      fullPath: '/referral/$id'
+      preLoaderRoute: typeof ReferralIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referral/new': {
+      id: '/referral/new'
+      path: '/referral/new'
+      fullPath: '/referral/new'
+      preLoaderRoute: typeof ReferralNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register/child': {
+      id: '/register/child'
+      path: '/register/child'
+      fullPath: '/register/child'
+      preLoaderRoute: typeof RegisterChildRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register/household': {
+      id: '/register/household'
+      path: '/register/household'
+      fullPath: '/register/household'
+      preLoaderRoute: typeof RegisterHouseholdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register/person': {
+      id: '/register/person'
+      path: '/register/person'
+      fullPath: '/register/person'
+      preLoaderRoute: typeof RegisterPersonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register/pregnancy': {
+      id: '/register/pregnancy'
+      path: '/register/pregnancy'
+      fullPath: '/register/pregnancy'
+      preLoaderRoute: typeof RegisterPregnancyRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -714,10 +894,18 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   WelcomeRoute: WelcomeRoute,
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminAssessmentTypesRoute: AdminAssessmentTypesRoute,
+  AdminAuditLogsRoute: AdminAuditLogsRoute,
+  AdminFacilitiesRoute: AdminFacilitiesRoute,
+  AdminGeographyRoute: AdminGeographyRoute,
+  AdminUsersRoute: AdminUsersRoute,
   AssessmentIdRoute: AssessmentIdRoute,
   AssessmentNewRoute: AssessmentNewRoute,
   ChildIdRoute: ChildIdRoute,
   CommunityIdRoute: CommunityIdRoute,
+  CommunityNewRoute: CommunityNewRoute,
+  DevAiRoute: DevAiRoute,
   FollowupIdRoute: FollowupIdRoute,
   FollowupNewRoute: FollowupNewRoute,
   HouseholdIdRoute: HouseholdIdRoute,
@@ -729,7 +917,18 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterHouseholdRoute: RegisterHouseholdRoute,
   RegisterPersonRoute: RegisterPersonRoute,
   RegisterPregnancyRoute: RegisterPregnancyRoute,
+  AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

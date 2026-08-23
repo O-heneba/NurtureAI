@@ -53,20 +53,37 @@ function Signup() {
           <div className="font-bold">NurtureAI</div>
         </div>
         <h1 className="text-2xl font-bold">Create your account</h1>
-        <p className="text-sm text-muted-foreground mt-1">Register to start using NurtureAI for your CHPS work.</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Register to start using NurtureAI for your CHPS work.
+        </p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div className="space-y-1.5">
             <Label>Full name</Label>
-            <Input value={v.fullName} onChange={(e) => setV({ ...v, fullName: e.target.value })} placeholder="e.g. Ama Boateng" required />
+            <Input
+              value={v.fullName}
+              onChange={(e) => setV({ ...v, fullName: e.target.value })}
+              placeholder="e.g. Ama Boateng"
+              required
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Email</Label>
-            <Input type="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} required />
+            <Input
+              type="email"
+              value={v.email}
+              onChange={(e) => setV({ ...v, email: e.target.value })}
+              required
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Password</Label>
-            <Input type="password" value={v.password} onChange={(e) => setV({ ...v, password: e.target.value })} required />
+            <Input
+              type="password"
+              value={v.password}
+              onChange={(e) => setV({ ...v, password: e.target.value })}
+              required
+            />
           </div>
           <Button type="submit" className="w-full rounded-xl" disabled={loading}>
             {loading ? "Creating account…" : "Create account"}
@@ -74,7 +91,10 @@ function Signup() {
         </form>
 
         <div className="mt-6 text-center text-xs text-muted-foreground">
-          Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>
+          Already have an account?{" "}
+          <Link to="/login" className="text-primary font-medium hover:underline">
+            Sign in
+          </Link>
         </div>
       </Card>
     </div>

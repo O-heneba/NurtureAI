@@ -34,7 +34,9 @@ function Welcome() {
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="rounded-xl">
-              <Link to="/login">Get started <ArrowRight className="ml-1 h-4 w-4" /></Link>
+              <Link to="/login">
+                Get started <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="rounded-xl">
               <Link to="/">View demo dashboard</Link>
@@ -44,9 +46,21 @@ function Welcome() {
 
         <div className="grid sm:grid-cols-3 gap-4 mt-16">
           {[
-            { icon: Users, title: "Household registry", body: "Community-first data model built for CHPS compounds." },
-            { icon: Sparkles, title: "AI assessments", body: "Risk scoring, referrals and nutrition guidance in seconds." },
-            { icon: ShieldCheck, title: "Works offline", body: "Sync when you get back to a signal. Never lose data." },
+            {
+              icon: Users,
+              title: "Household registry",
+              body: "Community-first data model built for CHPS compounds.",
+            },
+            {
+              icon: Sparkles,
+              title: "AI assessments",
+              body: "Risk scoring, referrals and nutrition guidance in seconds.",
+            },
+            {
+              icon: ShieldCheck,
+              title: "Works offline",
+              body: "Sync when you get back to a signal. Never lose data.",
+            },
           ].map((f) => (
             <div key={f.title} className="rounded-2xl border bg-card p-5">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary mb-3">

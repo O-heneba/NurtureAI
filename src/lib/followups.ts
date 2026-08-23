@@ -12,13 +12,21 @@ async function uid(): Promise<string> {
 }
 
 export type FollowUpType =
-  | "post_referral" | "maternal" | "newborn" | "child_health"
-  | "nutrition" | "medication" | "missed_appointment" | "general"
-  | "household_visit" | "other";
+  | "post_referral"
+  | "maternal"
+  | "newborn"
+  | "child_health"
+  | "nutrition"
+  | "medication"
+  | "missed_appointment"
+  | "general"
+  | "household_visit"
+  | "other";
 export type FollowUpPriority = "routine" | "priority" | "urgent";
 export type FollowUpStatus =
-  | "draft" | "scheduled" | "due" | "in_progress" | "completed" | "missed" | "cancelled";
-export type ContactMethod = "household_visit" | "phone_call" | "community_visit" | "facility_coordination";
+  "draft" | "scheduled" | "due" | "in_progress" | "completed" | "missed" | "cancelled";
+export type ContactMethod =
+  "household_visit" | "phone_call" | "community_visit" | "facility_coordination";
 
 export interface FollowUpRow {
   id: string;
@@ -68,7 +76,9 @@ export interface FollowUpOutcomeRow {
   notes: string | null;
 }
 
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export async function listFollowUps(filter?: {
   scope?: "all" | "mine" | "due" | "missed" | "upcoming" | "completed";
@@ -100,15 +110,21 @@ export async function getFollowUp(id: string): Promise<FollowUpRow | null> {
 }
 
 export async function listAttempts(follow_up_id: string): Promise<FollowUpAttempt[]> {
-  const { data, error } = await db.from("follow_up_attempts")
-    .select("*").eq("follow_up_id", follow_up_id).order("attempted_at", { ascending: true });
+  const { data, error } = await db
+    .from("follow_up_attempts")
+    .select("*")
+    .eq("follow_up_id", follow_up_id)
+    .order("attempted_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
 
 export async function getFollowUpOutcome(follow_up_id: string): Promise<FollowUpOutcomeRow | null> {
-  const { data, error } = await db.from("follow_up_outcomes")
-    .select("*").eq("follow_up_id", follow_up_id).maybeSingle();
+  const { data, error } = await db
+    .from("follow_up_outcomes")
+    .select("*")
+    .eq("follow_up_id", follow_up_id)
+    .maybeSingle();
   if (error) throw error;
   return data ?? null;
 }
@@ -159,16 +175,20 @@ export async function recordAttempt(v: {
   notes?: string;
 }): Promise<FollowUpAttempt> {
   const actor = await uid();
-  const { data, error } = await db.from("follow_up_attempts").insert({
-    follow_up_id: v.follow_up_id,
-    method: v.method,
-    contacted: v.contacted,
-    result: v.result ?? null,
-    barrier: v.barrier ?? null,
-    next_attempt_at: v.next_attempt_at ?? null,
-    notes: v.notes ?? null,
-    actor,
-  }).select("*").single();
+  const { data, error } = await db
+    .from("follow_up_attempts")
+    .insert({
+      follow_up_id: v.follow_up_id,
+      method: v.method,
+      contacted: v.contacted,
+      result: v.result ?? null,
+      barrier: v.barrier ?? null,
+      next_attempt_at: v.next_attempt_at ?? null,
+      notes: v.notes ?? null,
+      actor,
+    })
+    .select("*")
+    .single();
   if (error) throw error;
   if (v.contacted) {
     await db.from("follow_ups").update({ status: "in_progress" }).eq("id", v.follow_up_id);
@@ -207,11 +227,20 @@ export async function completeFollowUp(v: {
   };
   let out: FollowUpOutcomeRow;
   if (existing) {
-    const { data, error } = await db.from("follow_up_outcomes").update(payload).eq("id", existing.id).select("*").single();
+    const { data, error } = await db
+      .from("follow_up_outcomes")
+      .update(payload)
+      .eq("id", existing.id)
+      .select("*")
+      .single();
     if (error) throw error;
     out = data as FollowUpOutcomeRow;
   } else {
-    const { data, error } = await db.from("follow_up_outcomes").insert(payload).select("*").single();
+    const { data, error } = await db
+      .from("follow_up_outcomes")
+      .insert(payload)
+      .select("*")
+      .single();
     if (error) throw error;
     out = data as FollowUpOutcomeRow;
   }

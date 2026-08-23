@@ -43,7 +43,12 @@ function ResetPassword() {
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div className="space-y-1.5">
             <Label>New password</Label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
           </div>
           <Button type="submit" className="w-full rounded-xl" disabled={loading}>
             {loading ? "Updating…" : "Update password"}
@@ -51,7 +56,9 @@ function ResetPassword() {
         </form>
 
         <div className="mt-6 text-center text-xs text-muted-foreground">
-          <Link to="/login" className="text-primary font-medium hover:underline">Back to sign in</Link>
+          <Link to="/login" className="text-primary font-medium hover:underline">
+            Back to sign in
+          </Link>
         </div>
       </Card>
     </div>

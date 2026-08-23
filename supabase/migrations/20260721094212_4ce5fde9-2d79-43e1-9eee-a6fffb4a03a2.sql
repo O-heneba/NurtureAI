@@ -17,6 +17,18 @@ CREATE TABLE public.facilities (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.communities
+  ADD CONSTRAINT communities_chps_facility_id_fkey
+  FOREIGN KEY (chps_facility_id) REFERENCES public.facilities(id) ON DELETE SET NULL;
+
+ALTER TABLE public.communities
+  ADD CONSTRAINT communities_nearest_referral_facility_id_fkey
+  FOREIGN KEY (nearest_referral_facility_id) REFERENCES public.facilities(id) ON DELETE SET NULL;
+
+ALTER TABLE public.referrals
+  ADD CONSTRAINT referrals_facility_id_fkey
+  FOREIGN KEY (facility_id) REFERENCES public.facilities(id) ON DELETE SET NULL;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.facilities TO authenticated;
 GRANT ALL ON public.facilities TO service_role;
 ALTER TABLE public.facilities ENABLE ROW LEVEL SECURITY;

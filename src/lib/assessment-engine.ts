@@ -4,12 +4,7 @@
  */
 
 export type AssessmentType =
-  | "maternal"
-  | "newborn"
-  | "child_u5"
-  | "nutrition"
-  | "household"
-  | "followup";
+  "maternal" | "newborn" | "child_u5" | "nutrition" | "household" | "followup";
 
 export type Priority = "routine" | "monitor" | "priority_review" | "urgent";
 
@@ -17,7 +12,11 @@ export const ASSESSMENT_META: Record<
   AssessmentType,
   { label: string; description: string; icon: string }
 > = {
-  maternal: { label: "Maternal / Pregnancy", description: "Antenatal or postnatal woman", icon: "🤰" },
+  maternal: {
+    label: "Maternal / Pregnancy",
+    description: "Antenatal or postnatal woman",
+    icon: "🤰",
+  },
   newborn: { label: "Newborn (0–28 days)", description: "Post-birth infant screening", icon: "👶" },
   child_u5: { label: "Child Under 5", description: "IMCI-style child check", icon: "🧒" },
   nutrition: { label: "Nutrition", description: "Dietary and food-security review", icon: "🥣" },
@@ -59,7 +58,11 @@ export const DANGER_SIGNS: Record<AssessmentType, DangerSign[]> = {
     { key: "difficulty_breathing", label: "Difficulty or fast breathing", critical: true },
     { key: "convulsions", label: "Convulsions", critical: true },
     { key: "unconscious", label: "Unconscious or very sleepy", critical: true },
-    { key: "severe_dehydration", label: "Severe dehydration (sunken eyes, no tears)", critical: true },
+    {
+      key: "severe_dehydration",
+      label: "Severe dehydration (sunken eyes, no tears)",
+      critical: true,
+    },
     { key: "not_eating", label: "Unable to eat or drink", critical: true },
     { key: "persistent_vomit", label: "Persistent vomiting", critical: true },
     { key: "high_fever", label: "High fever (≥ 38.5°C)", critical: true },
@@ -200,25 +203,45 @@ export function runRules(
       const [sys, dia] = bp;
       if (sys >= 160 || dia >= 110) {
         escalate("urgent");
-        flags.push({ code: "bp_severe", severity: "urgent", message: `Severely elevated blood pressure (${sys}/${dia}). Urgent review.` });
+        flags.push({
+          code: "bp_severe",
+          severity: "urgent",
+          message: `Severely elevated blood pressure (${sys}/${dia}). Urgent review.`,
+        });
       } else if (sys >= 140 || dia >= 90) {
         escalate("priority_review");
-        flags.push({ code: "bp_high", severity: "warn", message: `Elevated blood pressure (${sys}/${dia}).` });
+        flags.push({
+          code: "bp_high",
+          severity: "warn",
+          message: `Elevated blood pressure (${sys}/${dia}).`,
+        });
       }
     } else if (data.blood_pressure) {
-      flags.push({ code: "bp_format", severity: "warn", message: "Blood pressure format looks unusual (expected e.g. 120/80)." });
+      flags.push({
+        code: "bp_format",
+        severity: "warn",
+        message: "Blood pressure format looks unusual (expected e.g. 120/80).",
+      });
     } else {
       missing.push("Blood pressure");
     }
     const t = num(data.temperature_c);
     if (t !== undefined && (t >= 38 || t < 35.5)) {
       escalate("priority_review");
-      flags.push({ code: "temp_abn", severity: "warn", message: `Temperature ${t}°C outside normal range.` });
+      flags.push({
+        code: "temp_abn",
+        severity: "warn",
+        message: `Temperature ${t}°C outside normal range.`,
+      });
     }
     const pulse = num(data.pulse);
     if (pulse !== undefined && (pulse < 50 || pulse > 120)) {
       escalate("priority_review");
-      flags.push({ code: "pulse_abn", severity: "warn", message: `Pulse ${pulse} bpm outside expected range.` });
+      flags.push({
+        code: "pulse_abn",
+        severity: "warn",
+        message: `Pulse ${pulse} bpm outside expected range.`,
+      });
     }
     if (!data.gestation_weeks) missing.push("Gestational age");
     if (!data.anc_visits && data.anc_visits !== 0) missing.push("ANC attendance");
@@ -227,7 +250,11 @@ export function runRules(
   if (type === "newborn") {
     const age = num(data.age_days);
     if (age !== undefined && (age < 0 || age > 28)) {
-      flags.push({ code: "age_range", severity: "warn", message: "Newborn age outside 0–28 days." });
+      flags.push({
+        code: "age_range",
+        severity: "warn",
+        message: "Newborn age outside 0–28 days.",
+      });
     }
     const bw = num(data.birth_weight_kg);
     if (bw !== undefined && bw < 2.5) {
@@ -237,7 +264,11 @@ export function runRules(
     const t = num(data.temperature_c);
     if (t !== undefined && (t >= 37.5 || t < 36)) {
       escalate("priority_review");
-      flags.push({ code: "temp_abn", severity: "warn", message: `Temperature ${t}°C outside normal newborn range (36–37.5).` });
+      flags.push({
+        code: "temp_abn",
+        severity: "warn",
+        message: `Temperature ${t}°C outside normal newborn range (36–37.5).`,
+      });
     }
   }
 
@@ -246,10 +277,18 @@ export function runRules(
     if (muac !== undefined) {
       if (muac < 11.5) {
         escalate("urgent");
-        flags.push({ code: "muac_sam", severity: "urgent", message: `MUAC ${muac} cm indicates severe acute malnutrition (SAM).` });
+        flags.push({
+          code: "muac_sam",
+          severity: "urgent",
+          message: `MUAC ${muac} cm indicates severe acute malnutrition (SAM).`,
+        });
       } else if (muac < 12.5) {
         escalate("priority_review");
-        flags.push({ code: "muac_mam", severity: "warn", message: `MUAC ${muac} cm indicates moderate acute malnutrition (MAM).` });
+        flags.push({
+          code: "muac_mam",
+          severity: "warn",
+          message: `MUAC ${muac} cm indicates moderate acute malnutrition (MAM).`,
+        });
       }
     } else {
       missing.push("MUAC");
@@ -261,7 +300,11 @@ export function runRules(
     }
     if (data.diarrhea && data.vomiting) {
       escalate("priority_review");
-      flags.push({ code: "dehydration_risk", severity: "warn", message: "Diarrhoea plus vomiting — dehydration risk." });
+      flags.push({
+        code: "dehydration_risk",
+        severity: "warn",
+        message: "Diarrhoea plus vomiting — dehydration risk.",
+      });
     }
   }
 
@@ -269,16 +312,28 @@ export function runRules(
     const meals = num(data.meals_per_day);
     if (meals !== undefined && meals < 2) {
       escalate("priority_review");
-      flags.push({ code: "low_meals", severity: "warn", message: "Fewer than 2 meals per day reported." });
+      flags.push({
+        code: "low_meals",
+        severity: "warn",
+        message: "Fewer than 2 meals per day reported.",
+      });
     }
     const groups = Array.isArray(data.food_groups) ? data.food_groups.length : 0;
     if (groups > 0 && groups < 4) {
       escalate("monitor");
-      flags.push({ code: "low_diversity", severity: "info", message: `Low dietary diversity (${groups} food groups).` });
+      flags.push({
+        code: "low_diversity",
+        severity: "info",
+        message: `Low dietary diversity (${groups} food groups).`,
+      });
     }
     if (data.food_insecure === true) {
       escalate("priority_review");
-      flags.push({ code: "food_insecure", severity: "warn", message: "Household reports food insecurity." });
+      flags.push({
+        code: "food_insecure",
+        severity: "warn",
+        message: "Household reports food insecurity.",
+      });
     }
   }
 
@@ -296,10 +351,18 @@ export function runRules(
   if (type === "followup") {
     if (data.condition_worsened === true) {
       escalate("urgent");
-      flags.push({ code: "worse", severity: "urgent", message: "Reported worsening since previous assessment." });
+      flags.push({
+        code: "worse",
+        severity: "urgent",
+        message: "Reported worsening since previous assessment.",
+      });
     } else if (data.recommendations_followed === false) {
       escalate("priority_review");
-      flags.push({ code: "not_followed", severity: "warn", message: "Prior recommendations not followed." });
+      flags.push({
+        code: "not_followed",
+        severity: "warn",
+        message: "Prior recommendations not followed.",
+      });
     }
   }
 
@@ -315,10 +378,26 @@ export const PRIORITY_META: Record<
   Priority,
   { label: string; tone: "success" | "info" | "warning" | "destructive"; description: string }
 > = {
-  routine: { label: "Routine", tone: "success", description: "No red flags detected. Continue routine care." },
-  monitor: { label: "Monitor", tone: "info", description: "Continue routine care with active monitoring." },
-  priority_review: { label: "Priority review", tone: "warning", description: "Clinical review recommended soon." },
-  urgent: { label: "Urgent attention", tone: "destructive", description: "Immediate professional clinical assessment may be required." },
+  routine: {
+    label: "Routine",
+    tone: "success",
+    description: "No red flags detected. Continue routine care.",
+  },
+  monitor: {
+    label: "Monitor",
+    tone: "info",
+    description: "Continue routine care with active monitoring.",
+  },
+  priority_review: {
+    label: "Priority review",
+    tone: "warning",
+    description: "Clinical review recommended soon.",
+  },
+  urgent: {
+    label: "Urgent attention",
+    tone: "destructive",
+    description: "Immediate professional clinical assessment may be required.",
+  },
 };
 
 /* ---------------- Validation ---------------- */
@@ -329,33 +408,37 @@ export interface ValidationIssue {
   level: "error" | "warn";
 }
 
-export function validate(
-  type: AssessmentType,
-  data: Record<string, any>,
-): ValidationIssue[] {
+export function validate(type: AssessmentType, data: Record<string, any>): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const push = (field: string, message: string, level: "error" | "warn" = "warn") =>
     issues.push({ field, message, level });
 
   if (type === "maternal") {
     const gw = num(data.gestation_weeks);
-    if (gw !== undefined && (gw < 1 || gw > 44)) push("gestation_weeks", "Gestational age must be between 1 and 44 weeks.", "error");
+    if (gw !== undefined && (gw < 1 || gw > 44))
+      push("gestation_weeks", "Gestational age must be between 1 and 44 weeks.", "error");
     const bp = parseBp(data.blood_pressure);
-    if (data.blood_pressure && !bp) push("blood_pressure", "Blood pressure must look like 120/80.", "error");
+    if (data.blood_pressure && !bp)
+      push("blood_pressure", "Blood pressure must look like 120/80.", "error");
     const t = num(data.temperature_c);
-    if (t !== undefined && (t < 30 || t > 43)) push("temperature_c", "Temperature outside plausible range.", "error");
+    if (t !== undefined && (t < 30 || t > 43))
+      push("temperature_c", "Temperature outside plausible range.", "error");
   }
   if (type === "newborn") {
     const age = num(data.age_days);
-    if (age !== undefined && (age < 0 || age > 90)) push("age_days", "Age (days) is not plausible for a newborn.", "error");
+    if (age !== undefined && (age < 0 || age > 90))
+      push("age_days", "Age (days) is not plausible for a newborn.", "error");
     const bw = num(data.birth_weight_kg);
-    if (bw !== undefined && (bw < 0.4 || bw > 6)) push("birth_weight_kg", "Birth weight outside plausible range.", "error");
+    if (bw !== undefined && (bw < 0.4 || bw > 6))
+      push("birth_weight_kg", "Birth weight outside plausible range.", "error");
   }
   if (type === "child_u5") {
     const age = num(data.age_months);
-    if (age !== undefined && (age < 0 || age > 60)) push("age_months", "Child age must be 0–60 months for under-5.", "error");
+    if (age !== undefined && (age < 0 || age > 60))
+      push("age_months", "Child age must be 0–60 months for under-5.", "error");
     const w = num(data.weight_kg);
-    if (w !== undefined && (w < 1 || w > 40)) push("weight_kg", "Weight outside plausible range.", "error");
+    if (w !== undefined && (w < 1 || w > 40))
+      push("weight_kg", "Weight outside plausible range.", "error");
   }
   return issues;
 }

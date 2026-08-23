@@ -20,10 +20,7 @@ export function RiskBadge({ level }: { level: string }) {
   return (
     <Badge
       variant="outline"
-      className={cn(
-        "capitalize font-medium gap-1.5 rounded-full px-2.5 py-0.5",
-        map[l] ?? "",
-      )}
+      className={cn("capitalize font-medium gap-1.5 rounded-full px-2.5 py-0.5", map[l] ?? "")}
     >
       <span
         className={cn(
@@ -104,12 +101,7 @@ export function StatCard({
   } as const;
   return (
     <div className="group relative overflow-hidden rounded-xl border bg-card p-5 card-elevated hover-lift">
-      <div
-        className={cn(
-          "absolute inset-x-0 top-0 h-0.5 opacity-70",
-          barMap[tone],
-        )}
-      />
+      <div className={cn("absolute inset-x-0 top-0 h-0.5 opacity-70", barMap[tone])} />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -191,9 +183,7 @@ export function PageHeader({
                   {c.label}
                 </Link>
               ) : (
-                <span className="px-1.5 py-0.5 text-foreground font-medium">
-                  {c.label}
-                </span>
+                <span className="px-1.5 py-0.5 text-foreground font-medium">{c.label}</span>
               )}
             </span>
           ))}
@@ -207,19 +197,13 @@ export function PageHeader({
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">
-              {title}
-            </h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{title}</h1>
             {description && (
-              <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-                {description}
-              </p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{description}</p>
             )}
           </div>
         </div>
-        {actions && (
-          <div className="flex shrink-0 items-center gap-2">{actions}</div>
-        )}
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
     </div>
   );
@@ -238,9 +222,7 @@ export function SectionTitle({
     <div className="mb-4 flex items-end justify-between gap-4">
       <div className="min-w-0">
         <h2 className="text-lg font-semibold tracking-tight truncate">{title}</h2>
-        {description && (
-          <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
-        )}
+        {description && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
       </div>
       {actions && <div className="shrink-0">{actions}</div>}
     </div>
@@ -252,14 +234,7 @@ export function SectionTitle({
 /* -------------------------------------------------------------------------- */
 
 export function Skeleton({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn(
-        "rounded-md skeleton-shimmer",
-        className,
-      )}
-    />
-  );
+  return <div className={cn("rounded-md skeleton-shimmer", className)} />;
 }
 
 export function StatCardSkeleton() {
@@ -294,7 +269,11 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
   return (
     <div className="space-y-2">
       {Array.from({ length: rows }).map((_, r) => (
-        <div key={r} className="grid gap-3 rounded-lg border p-3" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
+        <div
+          key={r}
+          className="grid gap-3 rounded-lg border p-3"
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}
+        >
           {Array.from({ length: cols }).map((_, c) => (
             <Skeleton key={c} className="h-4" />
           ))}
@@ -329,9 +308,7 @@ export function EmptyState({
       </div>
       <h3 className="text-base font-semibold tracking-tight">{title}</h3>
       {description && (
-        <p className="mt-1.5 text-sm text-muted-foreground max-w-sm">
-          {description}
-        </p>
+        <p className="mt-1.5 text-sm text-muted-foreground max-w-sm">{description}</p>
       )}
       {action && <div className="mt-5">{action}</div>}
     </div>
@@ -362,9 +339,7 @@ export function AIRecommendationCard({
   } as const;
   return (
     <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border bg-card p-5 sm:p-6 card-elevated",
-      )}
+      className={cn("relative overflow-hidden rounded-2xl border bg-card p-5 sm:p-6 card-elevated")}
     >
       {/* aura */}
       <div
@@ -391,9 +366,7 @@ export function AIRecommendationCard({
             <div className="text-sm font-semibold tracking-tight">{title}</div>
           </div>
         </div>
-        <div className="text-sm text-foreground/90 leading-relaxed space-y-2">
-          {children}
-        </div>
+        <div className="text-sm text-foreground/90 leading-relaxed space-y-2">{children}</div>
         {actions && <div className="mt-4 flex flex-wrap gap-2">{actions}</div>}
       </div>
     </div>

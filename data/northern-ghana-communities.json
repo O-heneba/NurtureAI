@@ -1,0 +1,442 @@
+[
+  {
+    "Region": "Northern",
+    "District": "Tamale Metropolitan",
+    "Capital Town": "Tamale",
+    "GPS Latitude": "9.4072° N",
+    "GPS Longitude": "0.8329° W",
+    "Sub-districts / Councils": "Tamale South, Tamale Central, Tamale North Sub-Metros"
+  },
+  {
+    "Region": "Northern",
+    "District": "Yendi Municipal",
+    "Capital Town": "Yendi",
+    "GPS Latitude": "9.4429° N",
+    "GPS Longitude": "0.0097° W",
+    "Sub-districts / Councils": "Yendi Town Council, Gundo Zonal Council, Bunbon Zonal Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Savelugu Municipal",
+    "Capital Town": "Savelugu",
+    "GPS Latitude": "9.6247° N",
+    "GPS Longitude": "0.8267° W",
+    "Sub-districts / Councils": "Savelugu Town Council, Pong-Tamale Area Council, Diare Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Sagnarigu Municipal",
+    "Capital Town": "Sagnarigu",
+    "GPS Latitude": "9.4447° N",
+    "GPS Longitude": "0.8653° W",
+    "Sub-districts / Councils": "Sagnarigu Town Council, Choggu Zonal Council, Kanvilli Zonal Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Nanumba North Municipal",
+    "Capital Town": "Bimbilla",
+    "GPS Latitude": "8.8556° N",
+    "GPS Longitude": "0.0634° E",
+    "Sub-districts / Councils": "Bimbilla Town Council, Juo Zonal Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Gushegu Municipal",
+    "Capital Town": "Gushegu",
+    "GPS Latitude": "9.9197° N",
+    "GPS Longitude": "0.2201° W",
+    "Sub-districts / Councils": "Gushegu Town Council, Kpatinga Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Nanumba South District",
+    "Capital Town": "Wulensi",
+    "GPS Latitude": "8.6508° N",
+    "GPS Longitude": "0.0161° E",
+    "Sub-districts / Councils": "Wulensi Town Council, Lungni Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Saboba District",
+    "Capital Town": "Saboba",
+    "GPS Latitude": "9.7083° N",
+    "GPS Longitude": "0.3236° E",
+    "Sub-districts / Councils": "Saboba Town Council, Kpalba Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Kumbungu District",
+    "Capital Town": "Kumbungu",
+    "GPS Latitude": "9.5297° N",
+    "GPS Longitude": "0.9575° W",
+    "Sub-districts / Councils": "Kumbungu Town Council, Gbullung Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Tolon District",
+    "Capital Town": "Tolon",
+    "GPS Latitude": "9.4314° N",
+    "GPS Longitude": "0.9669° W",
+    "Sub-districts / Councils": "Tolon Town Council, Nyankpala Zonal Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Karaga District",
+    "Capital Town": "Karaga",
+    "GPS Latitude": "9.9239° N",
+    "GPS Longitude": "0.4300° W",
+    "Sub-districts / Councils": "Karaga Town Council, Pishigu Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Zabzugu District",
+    "Capital Town": "Zabzugu",
+    "GPS Latitude": "9.2906° N",
+    "GPS Longitude": "0.2928° E",
+    "Sub-districts / Councils": "Zabzugu Town Council, Gor Tani Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Tatale-Sangule District",
+    "Capital Town": "Tatale",
+    "GPS Latitude": "9.3364° N",
+    "GPS Longitude": "0.5186° E",
+    "Sub-districts / Councils": "Tatale Town Council, Sangule Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Mion District",
+    "Capital Town": "Sang",
+    "GPS Latitude": "9.4186° N",
+    "GPS Longitude": "0.2750° W",
+    "Sub-districts / Councils": "Sang Area Council, Jimle Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Kpandai District",
+    "Capital Town": "Kpandai",
+    "GPS Latitude": "8.4878° N",
+    "GPS Longitude": "0.0131° W",
+    "Sub-districts / Councils": "Kpandai Town Council, Katiejeli Area Council"
+  },
+  {
+    "Region": "Northern",
+    "District": "Nanton District",
+    "Capital Town": "Nanton",
+    "GPS Latitude": "9.5544° N",
+    "GPS Longitude": "0.7303° W",
+    "Sub-districts / Councils": "Nanton Area Council, Zoggu Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Bolgatanga Municipal",
+    "Capital Town": "Bolgatanga",
+    "GPS Latitude": "10.7856° N",
+    "GPS Longitude": "0.8514° W",
+    "Sub-districts / Councils": "Bolgatanga Town Council, Zuarungu Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Bawku Municipal",
+    "Capital Town": "Bawku",
+    "GPS Latitude": "11.0617° N",
+    "GPS Longitude": "0.2417° W",
+    "Sub-districts / Councils": "Bawku Central Urban Council, Mognori Zonal Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Kassena Nankana Municipal",
+    "Capital Town": "Navrongo",
+    "GPS Latitude": "10.8942° N",
+    "GPS Longitude": "1.0925° W",
+    "Sub-districts / Councils": "Navrongo Urban Council, Kologo Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Builsa North Municipal",
+    "Capital Town": "Sandema",
+    "GPS Latitude": "10.7242° N",
+    "GPS Longitude": "1.2858° W",
+    "Sub-districts / Councils": "Sandema Town Council, Wiaga Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Bolgatanga East District",
+    "Capital Town": "Zuarungu",
+    "GPS Latitude": "10.7933° N",
+    "GPS Longitude": "0.8033° W",
+    "Sub-districts / Councils": "Zuarungu Area Council, Gambibgo Sub-district"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Bawku West District",
+    "Capital Town": "Zebilla",
+    "GPS Latitude": "10.9167° N",
+    "GPS Longitude": "0.5167° W",
+    "Sub-districts / Councils": "Zebilla Town Council, Binaba Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Binduri District",
+    "Capital Town": "Binduri",
+    "GPS Latitude": "10.9639° N",
+    "GPS Longitude": "0.3161° W",
+    "Sub-districts / Councils": "Binduri Area Council, Bazua Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Bongo District",
+    "Capital Town": "Bongo",
+    "GPS Latitude": "10.9092° N",
+    "GPS Longitude": "0.8075° W",
+    "Sub-districts / Councils": "Bongo Town Council, Zorko Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Builsa South District",
+    "Capital Town": "Fumbisi",
+    "GPS Latitude": "10.4539° N",
+    "GPS Longitude": "1.3039° W",
+    "Sub-districts / Councils": "Fumbisi Area Council, Gbedema Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Garu District",
+    "Capital Town": "Garu",
+    "GPS Latitude": "10.8406° N",
+    "GPS Longitude": "0.1794° W",
+    "Sub-districts / Councils": "Garu Town Council, Siniensi Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Tempane District",
+    "Capital Town": "Tempane",
+    "GPS Latitude": "10.7511° N",
+    "GPS Longitude": "0.1136° W",
+    "Sub-districts / Councils": "Tempane Area Council, Worikambo Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Kassena Nankana West District",
+    "Capital Town": "Paga",
+    "GPS Latitude": "10.9933° N",
+    "GPS Longitude": "1.1142° W",
+    "Sub-districts / Councils": "Paga Town Council, Sirigu Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Nabdam District",
+    "Capital Town": "Nangodi",
+    "GPS Latitude": "10.8528° N",
+    "GPS Longitude": "0.6658° W",
+    "Sub-districts / Councils": "Nangodi Area Council, Zanlerigu Sub-district"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Pusiga District",
+    "Capital Town": "Pusiga",
+    "GPS Latitude": "11.0825° N",
+    "GPS Longitude": "0.1342° W",
+    "Sub-districts / Councils": "Pusiga Town Council, Widana Area Council"
+  },
+  {
+    "Region": "Upper East",
+    "District": "Talensi District",
+    "Capital Town": "Tongo",
+    "GPS Latitude": "10.6653° N",
+    "GPS Longitude": "0.8000° W",
+    "Sub-districts / Councils": "Tongo Area Council, Duusi Area Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Wa Municipal",
+    "Capital Town": "Wa",
+    "GPS Latitude": "10.0601° N",
+    "GPS Longitude": "2.5099° W",
+    "Sub-districts / Councils": "Wa Urban Council, Busa Zonal Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Jirapa Municipal",
+    "Capital Town": "Jirapa",
+    "GPS Latitude": "10.5222° N",
+    "GPS Longitude": "2.7042° W",
+    "Sub-districts / Councils": "Jirapa Town Council, Hain Area Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Lawra Municipal",
+    "Capital Town": "Lawra",
+    "GPS Latitude": "10.6411° N",
+    "GPS Longitude": "2.8986° W",
+    "Sub-districts / Councils": "Lawra Town Council, Babile Area Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Nandom Municipal",
+    "Capital Town": "Nandom",
+    "GPS Latitude": "10.8475° N",
+    "GPS Longitude": "2.8975° W",
+    "Sub-districts / Councils": "Nandom Town Council, Ko Area Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Sissala East Municipal",
+    "Capital Town": "Tumu",
+    "GPS Latitude": "10.8756° N",
+    "GPS Longitude": "1.9792° W",
+    "Sub-districts / Councils": "Tumu Town Council, Wellembelle Zonal Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Sissala West District",
+    "Capital Town": "Gwollu",
+    "GPS Latitude": "10.9786° N",
+    "GPS Longitude": "2.2222° W",
+    "Sub-districts / Councils": "Gwollu Area Council, Zini Area Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Lambussie District",
+    "Capital Town": "Lambussie",
+    "GPS Latitude": "10.8122° N",
+    "GPS Longitude": "2.7667° W",
+    "Sub-districts / Councils": "Lambussie Area Council, Hamile Area Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Nadowli-Kaleo District",
+    "Capital Town": "Nadowli",
+    "GPS Latitude": "10.3789° N",
+    "GPS Longitude": "2.6592° W",
+    "Sub-districts / Councils": "Nadowli Area Council, Kaleo Area Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Daffiama Bussie Issa District",
+    "Capital Town": "Issa",
+    "GPS Latitude": "10.3800° N",
+    "GPS Longitude": "2.3486° W",
+    "Sub-districts / Councils": "Issa Area Council, Daffiama Area Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Wa East District",
+    "Capital Town": "Funsi",
+    "GPS Latitude": "10.1558° N",
+    "GPS Longitude": "1.9547° W",
+    "Sub-districts / Councils": "Funsi Area Council, Loggu Area Council"
+  },
+  {
+    "Region": "Upper West",
+    "District": "Wa West District",
+    "Capital Town": "Wechiau",
+    "GPS Latitude": "9.8197° N",
+    "GPS Longitude": "2.6847° W",
+    "Sub-districts / Councils": "Wechiau Area Council, Eggu Area Council"
+  },
+  {
+    "Region": "Savannah",
+    "District": "West Gonja Municipal",
+    "Capital Town": "Damongo",
+    "GPS Latitude": "9.0833° N",
+    "GPS Longitude": "1.8167° W",
+    "Sub-districts / Councils": "Damongo Town Council, Busunu Area Council"
+  },
+  {
+    "Region": "Savannah",
+    "District": "East Gonja Municipal",
+    "Capital Town": "Salaga",
+    "GPS Latitude": "8.5511° N",
+    "GPS Longitude": "0.5178° W",
+    "Sub-districts / Councils": "Salaga Town Council, Kpembe Area Council"
+  },
+  {
+    "Region": "Savannah",
+    "District": "Bole District",
+    "Capital Town": "Bole",
+    "GPS Latitude": "9.0347° N",
+    "GPS Longitude": "2.4850° W",
+    "Sub-districts / Councils": "Bole Town Council, Bamboi Area Council"
+  },
+  {
+    "Region": "Savannah",
+    "District": "Central Gonja District",
+    "Capital Town": "Buipe",
+    "GPS Latitude": "8.5806° N",
+    "GPS Longitude": "1.5392° W",
+    "Sub-districts / Councils": "Buipe Town Council, Mpaha Area Council"
+  },
+  {
+    "Region": "Savannah",
+    "District": "North Gonja District",
+    "Capital Town": "Daboya",
+    "GPS Latitude": "9.5317° N",
+    "GPS Longitude": "1.3822° W",
+    "Sub-districts / Councils": "Daboya Area Council, Mankarigu Area Council"
+  },
+  {
+    "Region": "Savannah",
+    "District": "North East Gonja District",
+    "Capital Town": "Kpalbe",
+    "GPS Latitude": "8.9242° N",
+    "GPS Longitude": "0.6978° W",
+    "Sub-districts / Councils": "Kpalbe Area Council, local unit committees"
+  },
+  {
+    "Region": "Savannah",
+    "District": "Sawla-Tuna-Kalba District",
+    "Capital Town": "Sawla",
+    "GPS Latitude": "9.2817° N",
+    "GPS Longitude": "2.4217° W",
+    "Sub-districts / Councils": "Sawla Area Council, Tuna Area Council"
+  },
+  {
+    "Region": "North East",
+    "District": "East Mamprusi Municipal",
+    "Capital Town": "Nalerigu",
+    "GPS Latitude": "10.5306° N",
+    "GPS Longitude": "0.3664° W",
+    "Sub-districts / Councils": "Gambaga Town Council, Nalerigu Area Council"
+  },
+  {
+    "Region": "North East",
+    "District": "West Mamprusi Municipal",
+    "Capital Town": "Walewale",
+    "GPS Latitude": "10.3517° N",
+    "GPS Longitude": "0.7986° W",
+    "Sub-districts / Councils": "Walewale Town Council, Wulugu Area Council"
+  },
+  {
+    "Region": "North East",
+    "District": "Bunkpurugu-Nyakpanduri District",
+    "Capital Town": "Bunkpurugu",
+    "GPS Latitude": "10.5217° N",
+    "GPS Longitude": "0.0544° E",
+    "Sub-districts / Councils": "Bunkpurugu Town Council, Nakpanduri Area Council"
+  },
+  {
+    "Region": "North East",
+    "District": "Yunyoo-Nasuan District",
+    "Capital Town": "Yunyoo",
+    "GPS Latitude": "10.4686° N",
+    "GPS Longitude": "0.0469° E",
+    "Sub-districts / Councils": "Yunyoo Area Council, Nasuan Area Council"
+  },
+  {
+    "Region": "North East",
+    "District": "Chereponi District",
+    "Capital Town": "Chereponi",
+    "GPS Latitude": "10.1333° N",
+    "GPS Longitude": "0.2833° E",
+    "Sub-districts / Councils": "Chereponi Town Council, Wenchiki Area Council"
+  },
+  {
+    "Region": "North East",
+    "District": "Mamprugu Moagduri District",
+    "Capital Town": "Yagaba",
+    "GPS Latitude": "10.2239° N",
+    "GPS Longitude": "1.2828° W",
+    "Sub-districts / Councils": "Yagaba Area Council, Kubori Area Council"
+  }
+]

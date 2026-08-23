@@ -16,7 +16,8 @@ async function callGateway(body: Record<string, unknown>) {
     body: JSON.stringify(body),
   });
   if (res.status === 429) throw new Error("AI rate limit reached — please try again shortly.");
-  if (res.status === 402) throw new Error("AI credits exhausted. Add credits in your workspace to continue.");
+  if (res.status === 402)
+    throw new Error("AI credits exhausted. Add credits in your workspace to continue.");
   if (!res.ok) {
     const t = await res.text();
     throw new Error(`AI request failed (${res.status}): ${t.slice(0, 200)}`);
@@ -30,13 +31,15 @@ async function callGateway(body: Record<string, unknown>) {
 
 const AssessInput = z.object({
   assessmentType: z.string().default("general"),
-  patient: z.object({
-    name: z.string().optional(),
-    age: z.number().optional(),
-    sex: z.string().optional(),
-    community: z.string().optional(),
-    visitType: z.string().optional(),
-  }).default({}),
+  patient: z
+    .object({
+      name: z.string().optional(),
+      age: z.number().optional(),
+      sex: z.string().optional(),
+      community: z.string().optional(),
+      visitType: z.string().optional(),
+    })
+    .default({}),
   vitals: z.record(z.string(), z.union([z.string(), z.number()])).default({}),
   symptoms: z.array(z.string()).default([]),
   pregnancy: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
@@ -88,10 +91,15 @@ export const assessRisk = createServerFn({ method: "POST" })
 /* ------------------- Nutrition assistant chat ------------------- */
 
 const ChatInput = z.object({
-  messages: z.array(z.object({
-    role: z.enum(["user", "assistant"]),
-    content: z.string(),
-  })).min(1).max(50),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string(),
+      }),
+    )
+    .min(1)
+    .max(50),
 });
 
 const NUTRITION_SYSTEM = `You are NurtureAI's Nutrition Assistant for CHPS community health workers in Ghana.
@@ -114,13 +122,22 @@ export const nutritionChat = createServerFn({ method: "POST" })
 /* ------------------- Modular assessment analysis ------------------- */
 
 const AnalyzeInput = z.object({
-  assessment_type: z.enum(["maternal", "newborn", "child_u5", "nutrition", "household", "followup"]),
+  assessment_type: z.enum([
+    "maternal",
+    "newborn",
+    "child_u5",
+    "nutrition",
+    "household",
+    "followup",
+  ]),
   person: z.record(z.string(), z.any()).default({}),
   danger_signs: z.array(z.string()).default([]),
   sections: z.record(z.string(), z.any()).default({}),
   rules: z.object({
     priority: z.string(),
-    flags: z.array(z.object({ code: z.string(), message: z.string(), severity: z.string() })).default([]),
+    flags: z
+      .array(z.object({ code: z.string(), message: z.string(), severity: z.string() }))
+      .default([]),
     missing: z.array(z.string()).default([]),
   }),
   previous: z.record(z.string(), z.any()).optional(),
@@ -171,4 +188,3 @@ export const analyzeAssessment = createServerFn({ method: "POST" })
       return JSON.parse(cleaned);
     }
   });
-

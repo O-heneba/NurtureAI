@@ -10,17 +10,49 @@ export const Route = createFileRoute("/nutrition")({
 });
 
 const guides = [
-  { icon: HeartPulse, title: "Pregnancy nutrition", desc: "Iron, folate & protein-rich local meal plans across all three trimesters.", tone: "bg-destructive/10 text-destructive" },
-  { icon: Baby, title: "Child nutrition (6–59m)", desc: "Complementary feeding using kontomire, koko, groundnut and eggs.", tone: "bg-primary/10 text-primary" },
-  { icon: Milk, title: "Breastfeeding support", desc: "Exclusive breastfeeding tips and troubleshooting common latch issues.", tone: "bg-info/10 text-info" },
-  { icon: Utensils, title: "Healthy meal ideas", desc: "Balanced Ghanaian meal suggestions across all six food groups.", tone: "bg-success/10 text-success" },
+  {
+    icon: HeartPulse,
+    title: "Pregnancy nutrition",
+    desc: "Iron, folate & protein-rich local meal plans across all three trimesters.",
+    tone: "bg-destructive/10 text-destructive",
+  },
+  {
+    icon: Baby,
+    title: "Child nutrition (6–59m)",
+    desc: "Complementary feeding using kontomire, koko, groundnut and eggs.",
+    tone: "bg-primary/10 text-primary",
+  },
+  {
+    icon: Milk,
+    title: "Breastfeeding support",
+    desc: "Exclusive breastfeeding tips and troubleshooting common latch issues.",
+    tone: "bg-info/10 text-info",
+  },
+  {
+    icon: Utensils,
+    title: "Healthy meal ideas",
+    desc: "Balanced Ghanaian meal suggestions across all six food groups.",
+    tone: "bg-success/10 text-success",
+  },
 ];
 
 const tips = [
-  { t: "Encourage exclusive breastfeeding", d: "For the first 6 months, no water, teas or other foods." },
-  { t: "Iron & folate every day", d: "Pregnant women should take iron and folate supplements throughout pregnancy." },
-  { t: "6 food groups daily", d: "Aim for staples, legumes, animal protein, vegetables, fruits and healthy fats." },
-  { t: "Growth monitoring monthly", d: "Weigh every child under 2 monthly to catch underweight early." },
+  {
+    t: "Encourage exclusive breastfeeding",
+    d: "For the first 6 months, no water, teas or other foods.",
+  },
+  {
+    t: "Iron & folate every day",
+    d: "Pregnant women should take iron and folate supplements throughout pregnancy.",
+  },
+  {
+    t: "6 food groups daily",
+    d: "Aim for staples, legumes, animal protein, vegetables, fruits and healthy fats.",
+  },
+  {
+    t: "Growth monitoring monthly",
+    d: "Weigh every child under 2 monthly to catch underweight early.",
+  },
 ];
 
 function Nutrition() {
@@ -31,14 +63,19 @@ function Nutrition() {
         description="Guidance, education materials and quick tips"
         actions={
           <Button asChild className="rounded-xl">
-            <Link to="/assistant"><Apple className="mr-1.5 h-4 w-4" /> Open Nutrition Assistant</Link>
+            <Link to="/assistant">
+              <Apple className="mr-1.5 h-4 w-4" /> Open Nutrition Assistant
+            </Link>
           </Button>
         }
       />
 
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
         {guides.map((g) => (
-          <Card key={g.title} className="rounded-xl hover:shadow-md transition-shadow cursor-pointer">
+          <Card
+            key={g.title}
+            className="rounded-xl hover:shadow-md transition-shadow cursor-pointer"
+          >
             <CardContent className="p-5">
               <div className={`grid h-10 w-10 place-items-center rounded-xl mb-3 ${g.tone}`}>
                 <g.icon className="h-5 w-5" />

@@ -10,24 +10,47 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  ChevronLeft, ChevronRight, Search, User as UserIcon, ShieldAlert,
-  Loader2, Sparkles, Save, Send, CheckCircle2, AlertTriangle, Info,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  User as UserIcon,
+  ShieldAlert,
+  Loader2,
+  Sparkles,
+  Save,
+  Send,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useServerFn } from "@tanstack/react-start";
-import { analyzeAssessment } from "@/lib/ai.functions";
+import { useClinicalAI } from "@/ai";
 import {
-  ASSESSMENT_META, DANGER_SIGNS, PRIORITY_META, SECTIONS, CONSENT_TEXT,
-  runRules, validate,
-  type AssessmentType, type Priority, type RulesOutput,
+  ASSESSMENT_META,
+  DANGER_SIGNS,
+  PRIORITY_META,
+  SECTIONS,
+  CONSENT_TEXT,
+  runRules,
+  validate,
+  type AssessmentType,
+  type Priority,
+  type RulesOutput,
 } from "@/lib/assessment-engine";
 import {
-  saveDraft, submitAssessment, searchPersons, listAssessmentsForPerson,
+  saveDraft,
+  submitAssessment,
+  searchPersons,
+  listAssessmentsForPerson,
 } from "@/lib/assessments";
 
 export const Route = createFileRoute("/assessment/new")({
@@ -66,7 +89,7 @@ function calcAge(dob: string | null): string {
 
 function NewAssessment() {
   const navigate = useNavigate();
-  const analyze = useServerFn(analyzeAssessment);
+  const analyze = useClinicalAI();
 
   const [step, setStep] = useState<WizardStep>("person");
   const [person, setPerson] = useState<Person | null>(null);
@@ -89,12 +112,18 @@ function NewAssessment() {
 
   const canNext = (() => {
     switch (step) {
-      case "person": return !!person;
-      case "type": return !!type;
-      case "consent": return consent;
-      case "danger": return true;
-      case "form": return errors.length === 0;
-      case "review": return true;
+      case "person":
+        return !!person;
+      case "type":
+        return !!type;
+      case "consent":
+        return consent;
+      case "danger":
+        return true;
+      case "form":
+        return errors.length === 0;
+      case "review":
+        return true;
     }
   })();
 
@@ -134,7 +163,12 @@ function NewAssessment() {
         person_id: person.id,
         assessment_type: type,
         inputs: {
-          person: { id: person.id, full_name: person.full_name, sex: person.sex, dob: person.date_of_birth },
+          person: {
+            id: person.id,
+            full_name: person.full_name,
+            sex: person.sex,
+            dob: person.date_of_birth,
+          },
           consent_given: consent,
           danger_signs: dangerSigns,
           sections: data,
@@ -152,15 +186,26 @@ function NewAssessment() {
 
   async function onSubmit() {
     if (!type || !person || !rules) return;
-    if (!consent) { toast.error("Consent is required before submission."); return; }
-    if (errors.length > 0) { toast.error("Please fix validation errors first."); return; }
+    if (!consent) {
+      toast.error("Consent is required before submission.");
+      return;
+    }
+    if (errors.length > 0) {
+      toast.error("Please fix validation errors first.");
+      return;
+    }
 
     setSubmitting(true);
     try {
       const ai = await analyze({
         data: {
           assessment_type: type,
-          person: { full_name: person.full_name, sex: person.sex, dob: person.date_of_birth, age_display: calcAge(person.date_of_birth) },
+          person: {
+            full_name: person.full_name,
+            sex: person.sex,
+            dob: person.date_of_birth,
+            age_display: calcAge(person.date_of_birth),
+          },
           danger_signs: dangerSigns,
           sections: data,
           rules: { priority: rules.priority, flags: rules.flags, missing: rules.missing },
@@ -173,7 +218,12 @@ function NewAssessment() {
         person_id: person.id,
         assessment_type: type,
         inputs: {
-          person: { id: person.id, full_name: person.full_name, sex: person.sex, dob: person.date_of_birth },
+          person: {
+            id: person.id,
+            full_name: person.full_name,
+            sex: person.sex,
+            dob: person.date_of_birth,
+          },
           consent_given: true,
           consent_at: new Date().toISOString(),
           danger_signs: dangerSigns,
@@ -206,7 +256,11 @@ function NewAssessment() {
         actions={
           person && type ? (
             <Button variant="outline" onClick={onSaveDraft} disabled={savingDraft}>
-              {savingDraft ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
+              {savingDraft ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-1.5" />
+              )}
               Save draft
             </Button>
           ) : null
@@ -217,24 +271,48 @@ function NewAssessment() {
         <CardContent className="p-6">
           <div className="mb-6">
             <div className="flex justify-between mb-2 text-xs">
-              <span className="font-semibold">Step {stepIdx + 1} of {ORDER.length}</span>
+              <span className="font-semibold">
+                Step {stepIdx + 1} of {ORDER.length}
+              </span>
               <span className="text-muted-foreground">{STEP_LABEL[step]}</span>
             </div>
             <Progress value={progress} className="h-2" />
           </div>
 
           <div className="min-h-[360px]">
-            {step === "person" && <PersonStep person={person} onPick={onPickPerson} previous={previous} />}
+            {step === "person" && (
+              <PersonStep person={person} onPick={onPickPerson} previous={previous} />
+            )}
             {step === "type" && <TypeStep person={person} type={type} onPick={setType} />}
-            {step === "consent" && <ConsentStep person={person} consent={consent} setConsent={setConsent} />}
+            {step === "consent" && (
+              <ConsentStep person={person} consent={consent} setConsent={setConsent} />
+            )}
             {step === "danger" && type && (
-              <DangerStep type={type} selected={dangerSigns} onChange={setDangerSigns} rules={rules} />
+              <DangerStep
+                type={type}
+                selected={dangerSigns}
+                onChange={setDangerSigns}
+                rules={rules}
+              />
             )}
             {step === "form" && type && (
-              <FormStep type={type} data={data} onChange={setData} issues={validationIssues} rules={rules} />
+              <FormStep
+                type={type}
+                data={data}
+                onChange={setData}
+                issues={validationIssues}
+                rules={rules}
+              />
             )}
             {step === "review" && type && person && rules && (
-              <ReviewStep person={person} type={type} data={data} dangerSigns={dangerSigns} rules={rules} previous={previous} />
+              <ReviewStep
+                person={person}
+                type={type}
+                data={data}
+                dangerSigns={dangerSigns}
+                rules={rules}
+                previous={previous}
+              />
             )}
           </div>
 
@@ -248,7 +326,11 @@ function NewAssessment() {
               </Button>
             ) : (
               <Button onClick={onSubmit} disabled={submitting} className="bg-primary">
-                {submitting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
+                {submitting ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-1.5 h-4 w-4" />
+                )}
                 {submitting ? "Analysing…" : "Submit for AI review"}
               </Button>
             )}
@@ -262,7 +344,9 @@ function NewAssessment() {
 /* ---------------- Step: person ---------------- */
 
 function PersonStep({
-  person, onPick, previous,
+  person,
+  onPick,
+  previous,
 }: {
   person: Person | null;
   onPick: (p: Person) => void;
@@ -277,20 +361,36 @@ function PersonStep({
     setLoading(true);
     const t = setTimeout(() => {
       searchPersons(q)
-        .then((r) => { if (!cancelled) setResults(r as Person[]); })
-        .catch(() => { if (!cancelled) setResults([]); })
-        .finally(() => { if (!cancelled) setLoading(false); });
+        .then((r) => {
+          if (!cancelled) setResults(r as Person[]);
+        })
+        .catch(() => {
+          if (!cancelled) setResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }, 250);
-    return () => { cancelled = true; clearTimeout(t); };
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [q]);
 
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm text-muted-foreground mb-3">Search and select an existing person, or register a new one.</p>
+        <p className="text-sm text-muted-foreground mb-3">
+          Search and select an existing person, or register a new one.
+        </p>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name…" className="pl-9" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by name…"
+            className="pl-9"
+          />
         </div>
       </div>
 
@@ -301,9 +401,19 @@ function PersonStep({
               <CheckCircle2 className="h-4 w-4" /> Selected: {person.full_name}
             </div>
             <div className="text-xs text-muted-foreground grid sm:grid-cols-3 gap-2">
-              <div>Age: <span className="text-foreground font-medium">{calcAge(person.date_of_birth)}</span></div>
-              <div>Sex: <span className="text-foreground font-medium">{person.sex ?? "—"}</span></div>
-              <div>Previous risk: <span className="text-foreground font-medium">{previous?.risk_level ?? "None on record"}</span></div>
+              <div>
+                Age:{" "}
+                <span className="text-foreground font-medium">{calcAge(person.date_of_birth)}</span>
+              </div>
+              <div>
+                Sex: <span className="text-foreground font-medium">{person.sex ?? "—"}</span>
+              </div>
+              <div>
+                Previous risk:{" "}
+                <span className="text-foreground font-medium">
+                  {previous?.risk_level ?? "None on record"}
+                </span>
+              </div>
             </div>
             {previous && (
               <div className="text-xs text-muted-foreground mt-1 border-t pt-2">
@@ -316,41 +426,61 @@ function PersonStep({
       )}
 
       <div className="rounded-xl border overflow-hidden divide-y">
-        {loading && <div className="p-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Searching…</div>}
+        {loading && (
+          <div className="p-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+            Searching…
+          </div>
+        )}
         {!loading && results && results.length === 0 && (
           <div className="p-6">
             <EmptyState
               icon={<UserIcon className="h-6 w-6" />}
               title="No matching people"
               description="Register a new person to continue."
-              action={<Link to="/register/person"><Button variant="outline">Register person</Button></Link>}
+              action={
+                <Link to="/register/person">
+                  <Button variant="outline">Register person</Button>
+                </Link>
+              }
             />
           </div>
         )}
-        {!loading && results?.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onPick(p)}
-            className={cn(
-              "flex w-full items-center gap-3 p-3 text-left hover:bg-accent/40 transition-colors",
-              person?.id === p.id && "bg-primary/5",
-            )}
-          >
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary font-semibold">
-              {p.full_name.split(" ").map((s) => s[0]).slice(0, 2).join("")}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium truncate">{p.full_name}</div>
-              <div className="text-xs text-muted-foreground">{calcAge(p.date_of_birth)} · {p.sex ?? "—"}</div>
-            </div>
-            {person?.id === p.id && <CheckCircle2 className="h-4 w-4 text-primary" />}
-          </button>
-        ))}
+        {!loading &&
+          results?.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onPick(p)}
+              className={cn(
+                "flex w-full items-center gap-3 p-3 text-left hover:bg-accent/40 transition-colors",
+                person?.id === p.id && "bg-primary/5",
+              )}
+            >
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary font-semibold">
+                {p.full_name
+                  .split(" ")
+                  .map((s) => s[0])
+                  .slice(0, 2)
+                  .join("")}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{p.full_name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {calcAge(p.date_of_birth)} · {p.sex ?? "—"}
+                </div>
+              </div>
+              {person?.id === p.id && <CheckCircle2 className="h-4 w-4 text-primary" />}
+            </button>
+          ))}
       </div>
 
       <div className="text-right">
-        <Link to="/register/person"><Button variant="link" size="sm">+ Register new person</Button></Link>
+        <Link to="/register/person">
+          <Button variant="link" size="sm">
+            + Register new person
+          </Button>
+        </Link>
       </div>
     </div>
   );
@@ -359,7 +489,9 @@ function PersonStep({
 /* ---------------- Step: type ---------------- */
 
 function TypeStep({
-  person, type, onPick,
+  person,
+  type,
+  onPick,
 }: {
   person: Person | null;
   type: AssessmentType | null;
@@ -378,14 +510,17 @@ function TypeStep({
   const recommended = new Set<AssessmentType>();
   if (ageMonths !== null && ageMonths < 1) recommended.add("newborn");
   if (ageMonths !== null && ageMonths >= 0 && ageMonths <= 60) recommended.add("child_u5");
-  if (isFemaleAdult && ageMonths !== null && ageMonths >= 15 * 12 && ageMonths <= 50 * 12) recommended.add("maternal");
+  if (isFemaleAdult && ageMonths !== null && ageMonths >= 15 * 12 && ageMonths <= 50 * 12)
+    recommended.add("maternal");
   recommended.add("nutrition");
   recommended.add("household");
   recommended.add("followup");
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Choose the assessment pathway. Suggested options for this person are highlighted.</p>
+      <p className="text-sm text-muted-foreground">
+        Choose the assessment pathway. Suggested options for this person are highlighted.
+      </p>
       <div className="grid sm:grid-cols-2 gap-3">
         {(Object.keys(ASSESSMENT_META) as AssessmentType[]).map((k) => {
           const m = ASSESSMENT_META[k];
@@ -421,7 +556,9 @@ function TypeStep({
 /* ---------------- Step: consent ---------------- */
 
 function ConsentStep({
-  person, consent, setConsent,
+  person,
+  consent,
+  setConsent,
 }: {
   person: Person | null;
   consent: boolean;
@@ -432,14 +569,13 @@ function ConsentStep({
       <Alert>
         <Info className="h-4 w-4" />
         <AlertTitle>Privacy & consent</AlertTitle>
-        <AlertDescription className="text-sm leading-relaxed">
-          {CONSENT_TEXT}
-        </AlertDescription>
+        <AlertDescription className="text-sm leading-relaxed">{CONSENT_TEXT}</AlertDescription>
       </Alert>
       <label className="flex items-start gap-3 rounded-xl border p-4 cursor-pointer hover:bg-accent/30">
         <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} />
         <span className="text-sm">
-          I confirm that <strong>{person?.full_name ?? "the client"}</strong> (or their guardian) has been informed and consents to this assessment.
+          I confirm that <strong>{person?.full_name ?? "the client"}</strong> (or their guardian)
+          has been informed and consents to this assessment.
         </span>
       </label>
     </div>
@@ -449,7 +585,10 @@ function ConsentStep({
 /* ---------------- Step: danger ---------------- */
 
 function DangerStep({
-  type, selected, onChange, rules,
+  type,
+  selected,
+  onChange,
+  rules,
 }: {
   type: AssessmentType;
   selected: string[];
@@ -467,22 +606,30 @@ function DangerStep({
       <div className="flex items-start gap-3 p-4 rounded-xl bg-warning/10 border border-warning/30">
         <ShieldAlert className="h-5 w-5 text-warning shrink-0 mt-0.5" />
         <div className="text-sm">
-          Screen for danger signs first. Any <strong>critical</strong> sign will immediately mark the case as urgent for professional review.
+          Screen for danger signs first. Any <strong>critical</strong> sign will immediately mark
+          the case as urgent for professional review.
         </div>
       </div>
       <div className="grid sm:grid-cols-2 gap-2">
         {catalog.map((s) => {
           const on = selected.includes(s.key);
           return (
-            <label key={s.key} className={cn(
-              "flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/40",
-              on && s.critical && "border-destructive/50 bg-destructive/5",
-              on && !s.critical && "border-warning/50 bg-warning/5",
-            )}>
+            <label
+              key={s.key}
+              className={cn(
+                "flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/40",
+                on && s.critical && "border-destructive/50 bg-destructive/5",
+                on && !s.critical && "border-warning/50 bg-warning/5",
+              )}
+            >
               <Checkbox checked={on} onCheckedChange={() => toggle(s.key)} />
               <div className="min-w-0">
                 <div className="text-sm font-medium">{s.label}</div>
-                {s.critical && <div className="text-[10px] uppercase tracking-widest text-destructive mt-0.5">Critical</div>}
+                {s.critical && (
+                  <div className="text-[10px] uppercase tracking-widest text-destructive mt-0.5">
+                    Critical
+                  </div>
+                )}
               </div>
             </label>
           );
@@ -493,12 +640,15 @@ function DangerStep({
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Urgent priority</AlertTitle>
           <AlertDescription>
-            A critical danger sign has been reported. Immediate professional clinical assessment may be required. Continue the form so full context is captured for referral.
+            A critical danger sign has been reported. Immediate professional clinical assessment may
+            be required. Continue the form so full context is captured for referral.
           </AlertDescription>
         </Alert>
       )}
       {rules && !criticalHit && rules.priority !== "routine" && (
-        <div className="text-xs text-muted-foreground">Current rules-based priority: <strong>{PRIORITY_META[rules.priority].label}</strong></div>
+        <div className="text-xs text-muted-foreground">
+          Current rules-based priority: <strong>{PRIORITY_META[rules.priority].label}</strong>
+        </div>
       )}
     </div>
   );
@@ -506,7 +656,17 @@ function DangerStep({
 
 /* ---------------- Field helpers ---------------- */
 
-function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  error,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="grid gap-1.5">
       <Label>{label}</Label>
@@ -517,7 +677,15 @@ function Field({ label, hint, error, children }: { label: string; hint?: string;
   );
 }
 
-function BoolRow({ label, value, onChange }: { label: string; value?: boolean; onChange: (v: boolean) => void }) {
+function BoolRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value?: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <label className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/30">
       <Checkbox checked={value === true} onCheckedChange={(v) => onChange(v === true)} />
@@ -533,7 +701,11 @@ function set<T extends Record<string, any>>(obj: T, key: string, value: any): T 
 /* ---------------- Step: form (per type) ---------------- */
 
 function FormStep({
-  type, data, onChange, issues, rules,
+  type,
+  data,
+  onChange,
+  issues,
+  rules,
 }: {
   type: AssessmentType;
   data: Record<string, any>;
@@ -548,11 +720,17 @@ function FormStep({
     <div className="space-y-6">
       {rules && rules.priority !== "routine" && (
         <div className="rounded-xl border bg-accent/30 p-4">
-          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Live rules preview</div>
-          <div className="text-sm">Current priority: <strong>{PRIORITY_META[rules.priority].label}</strong></div>
+          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+            Live rules preview
+          </div>
+          <div className="text-sm">
+            Current priority: <strong>{PRIORITY_META[rules.priority].label}</strong>
+          </div>
           {rules.flags.length > 0 && (
             <ul className="mt-2 text-xs space-y-1 text-muted-foreground">
-              {rules.flags.map((f) => <li key={f.code}>• {f.message}</li>)}
+              {rules.flags.map((f) => (
+                <li key={f.code}>• {f.message}</li>
+              ))}
             </ul>
           )}
         </div>
@@ -561,73 +739,167 @@ function FormStep({
       <div className="space-y-6">
         {SECTIONS[type].map((sec) => (
           <section key={sec.key}>
-            <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-widest">{sec.title}</h3>
+            <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-widest">
+              {sec.title}
+            </h3>
             {sec.key === "notes" && (
-              <Textarea rows={3} value={data.notes ?? ""} onChange={(e) => upd("notes", e.target.value)} placeholder="Free-text observations…" />
+              <Textarea
+                rows={3}
+                value={data.notes ?? ""}
+                onChange={(e) => upd("notes", e.target.value)}
+                placeholder="Free-text observations…"
+              />
             )}
 
             {type === "maternal" && sec.key === "pregnancy" && (
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Gestational age (weeks)" error={err("gestation_weeks")}>
-                  <Input type="number" value={data.gestation_weeks ?? ""} onChange={(e) => upd("gestation_weeks", e.target.value)} />
+                  <Input
+                    type="number"
+                    value={data.gestation_weeks ?? ""}
+                    onChange={(e) => upd("gestation_weeks", e.target.value)}
+                  />
                 </Field>
                 <Field label="ANC visits completed">
-                  <Input type="number" value={data.anc_visits ?? ""} onChange={(e) => upd("anc_visits", e.target.value)} />
+                  <Input
+                    type="number"
+                    value={data.anc_visits ?? ""}
+                    onChange={(e) => upd("anc_visits", e.target.value)}
+                  />
                 </Field>
                 <Field label="Gravida / Para">
-                  <Input value={data.gravida_para ?? ""} onChange={(e) => upd("gravida_para", e.target.value)} placeholder="e.g. G2 P1" />
+                  <Input
+                    value={data.gravida_para ?? ""}
+                    onChange={(e) => upd("gravida_para", e.target.value)}
+                    placeholder="e.g. G2 P1"
+                  />
                 </Field>
                 <Field label="Expected delivery date">
-                  <Input type="date" value={data.edd ?? ""} onChange={(e) => upd("edd", e.target.value)} />
+                  <Input
+                    type="date"
+                    value={data.edd ?? ""}
+                    onChange={(e) => upd("edd", e.target.value)}
+                  />
                 </Field>
               </div>
             )}
             {type === "maternal" && sec.key === "vitals" && (
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Blood pressure" hint="Format: systolic/diastolic e.g. 120/80" error={err("blood_pressure")}>
-                  <Input value={data.blood_pressure ?? ""} onChange={(e) => upd("blood_pressure", e.target.value)} placeholder="120/80" />
+                <Field
+                  label="Blood pressure"
+                  hint="Format: systolic/diastolic e.g. 120/80"
+                  error={err("blood_pressure")}
+                >
+                  <Input
+                    value={data.blood_pressure ?? ""}
+                    onChange={(e) => upd("blood_pressure", e.target.value)}
+                    placeholder="120/80"
+                  />
                 </Field>
                 <Field label="Temperature (°C)" error={err("temperature_c")}>
-                  <Input type="number" step="0.1" value={data.temperature_c ?? ""} onChange={(e) => upd("temperature_c", e.target.value)} />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={data.temperature_c ?? ""}
+                    onChange={(e) => upd("temperature_c", e.target.value)}
+                  />
                 </Field>
                 <Field label="Pulse (bpm)">
-                  <Input type="number" value={data.pulse ?? ""} onChange={(e) => upd("pulse", e.target.value)} />
+                  <Input
+                    type="number"
+                    value={data.pulse ?? ""}
+                    onChange={(e) => upd("pulse", e.target.value)}
+                  />
                 </Field>
                 <Field label="Weight (kg)">
-                  <Input type="number" step="0.1" value={data.weight_kg ?? ""} onChange={(e) => upd("weight_kg", e.target.value)} />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={data.weight_kg ?? ""}
+                    onChange={(e) => upd("weight_kg", e.target.value)}
+                  />
                 </Field>
               </div>
             )}
             {type === "maternal" && sec.key === "symptoms" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                {["headache", "swelling", "blurred_vision", "fever", "cough", "abdominal_pain", "bleeding", "fatigue"].map((s) => (
-                  <BoolRow key={s} label={s.replace(/_/g, " ")} value={data[`sym_${s}`]} onChange={(v) => upd(`sym_${s}`, v)} />
+                {[
+                  "headache",
+                  "swelling",
+                  "blurred_vision",
+                  "fever",
+                  "cough",
+                  "abdominal_pain",
+                  "bleeding",
+                  "fatigue",
+                ].map((s) => (
+                  <BoolRow
+                    key={s}
+                    label={s.replace(/_/g, " ")}
+                    value={data[`sym_${s}`]}
+                    onChange={(v) => upd(`sym_${s}`, v)}
+                  />
                 ))}
               </div>
             )}
             {type === "maternal" && sec.key === "medical" && (
-              <Textarea rows={2} value={data.medical_history ?? ""} onChange={(e) => upd("medical_history", e.target.value)} placeholder="Chronic conditions, prior complications…" />
+              <Textarea
+                rows={2}
+                value={data.medical_history ?? ""}
+                onChange={(e) => upd("medical_history", e.target.value)}
+                placeholder="Chronic conditions, prior complications…"
+              />
             )}
             {type === "maternal" && sec.key === "social" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="Long distance to facility" value={data.long_distance} onChange={(v) => upd("long_distance", v)} />
-                <BoolRow label="Financial hardship" value={data.financial_hardship} onChange={(v) => upd("financial_hardship", v)} />
-                <BoolRow label="No support at home" value={data.no_support} onChange={(v) => upd("no_support", v)} />
-                <BoolRow label="Access to clean water" value={data.clean_water} onChange={(v) => upd("clean_water", v)} />
+                <BoolRow
+                  label="Long distance to facility"
+                  value={data.long_distance}
+                  onChange={(v) => upd("long_distance", v)}
+                />
+                <BoolRow
+                  label="Financial hardship"
+                  value={data.financial_hardship}
+                  onChange={(v) => upd("financial_hardship", v)}
+                />
+                <BoolRow
+                  label="No support at home"
+                  value={data.no_support}
+                  onChange={(v) => upd("no_support", v)}
+                />
+                <BoolRow
+                  label="Access to clean water"
+                  value={data.clean_water}
+                  onChange={(v) => upd("clean_water", v)}
+                />
               </div>
             )}
 
             {type === "newborn" && sec.key === "birth" && (
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Age (days)" error={err("age_days")}>
-                  <Input type="number" value={data.age_days ?? ""} onChange={(e) => upd("age_days", e.target.value)} />
+                  <Input
+                    type="number"
+                    value={data.age_days ?? ""}
+                    onChange={(e) => upd("age_days", e.target.value)}
+                  />
                 </Field>
                 <Field label="Birth weight (kg)" error={err("birth_weight_kg")}>
-                  <Input type="number" step="0.1" value={data.birth_weight_kg ?? ""} onChange={(e) => upd("birth_weight_kg", e.target.value)} />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={data.birth_weight_kg ?? ""}
+                    onChange={(e) => upd("birth_weight_kg", e.target.value)}
+                  />
                 </Field>
                 <Field label="Place of birth">
-                  <Select value={data.place_of_birth ?? ""} onValueChange={(v) => upd("place_of_birth", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <Select
+                    value={data.place_of_birth ?? ""}
+                    onValueChange={(v) => upd("place_of_birth", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="facility">Health facility</SelectItem>
                       <SelectItem value="home">Home</SelectItem>
@@ -637,8 +909,13 @@ function FormStep({
                   </Select>
                 </Field>
                 <Field label="Delivery mode">
-                  <Select value={data.delivery_mode ?? ""} onValueChange={(v) => upd("delivery_mode", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <Select
+                    value={data.delivery_mode ?? ""}
+                    onValueChange={(v) => upd("delivery_mode", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="svd">Spontaneous vaginal</SelectItem>
                       <SelectItem value="cs">Caesarean</SelectItem>
@@ -651,11 +928,18 @@ function FormStep({
             {type === "newborn" && sec.key === "vitals" && (
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Temperature (°C)">
-                  <Input type="number" step="0.1" value={data.temperature_c ?? ""} onChange={(e) => upd("temperature_c", e.target.value)} />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={data.temperature_c ?? ""}
+                    onChange={(e) => upd("temperature_c", e.target.value)}
+                  />
                 </Field>
                 <Field label="Feeding">
                   <Select value={data.feeding ?? ""} onValueChange={(v) => upd("feeding", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="exclusive_bf">Exclusive breastfeeding</SelectItem>
                       <SelectItem value="mixed">Mixed feeding</SelectItem>
@@ -668,80 +952,180 @@ function FormStep({
             )}
             {type === "newborn" && sec.key === "exam" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="Cord clean & dry" value={data.cord_clean} onChange={(v) => upd("cord_clean", v)} />
-                <BoolRow label="Skin colour normal" value={data.skin_normal} onChange={(v) => upd("skin_normal", v)} />
-                <BoolRow label="Active & alert" value={data.active} onChange={(v) => upd("active", v)} />
-                <BoolRow label="Passing urine & stool" value={data.eliminating} onChange={(v) => upd("eliminating", v)} />
+                <BoolRow
+                  label="Cord clean & dry"
+                  value={data.cord_clean}
+                  onChange={(v) => upd("cord_clean", v)}
+                />
+                <BoolRow
+                  label="Skin colour normal"
+                  value={data.skin_normal}
+                  onChange={(v) => upd("skin_normal", v)}
+                />
+                <BoolRow
+                  label="Active & alert"
+                  value={data.active}
+                  onChange={(v) => upd("active", v)}
+                />
+                <BoolRow
+                  label="Passing urine & stool"
+                  value={data.eliminating}
+                  onChange={(v) => upd("eliminating", v)}
+                />
               </div>
             )}
             {type === "newborn" && sec.key === "immun" && (
               <div className="grid sm:grid-cols-2 gap-2">
                 <BoolRow label="BCG given" value={data.bcg} onChange={(v) => upd("bcg", v)} />
                 <BoolRow label="OPV0 given" value={data.opv0} onChange={(v) => upd("opv0", v)} />
-                <BoolRow label="Hep B birth dose given" value={data.hepb} onChange={(v) => upd("hepb", v)} />
+                <BoolRow
+                  label="Hep B birth dose given"
+                  value={data.hepb}
+                  onChange={(v) => upd("hepb", v)}
+                />
               </div>
             )}
 
             {type === "child_u5" && sec.key === "anthro" && (
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Age (months)" error={err("age_months")}>
-                  <Input type="number" value={data.age_months ?? ""} onChange={(e) => upd("age_months", e.target.value)} />
+                  <Input
+                    type="number"
+                    value={data.age_months ?? ""}
+                    onChange={(e) => upd("age_months", e.target.value)}
+                  />
                 </Field>
                 <Field label="Weight (kg)" error={err("weight_kg")}>
-                  <Input type="number" step="0.1" value={data.weight_kg ?? ""} onChange={(e) => upd("weight_kg", e.target.value)} />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={data.weight_kg ?? ""}
+                    onChange={(e) => upd("weight_kg", e.target.value)}
+                  />
                 </Field>
                 <Field label="Height (cm)">
-                  <Input type="number" step="0.1" value={data.height_cm ?? ""} onChange={(e) => upd("height_cm", e.target.value)} />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={data.height_cm ?? ""}
+                    onChange={(e) => upd("height_cm", e.target.value)}
+                  />
                 </Field>
                 <Field label="MUAC (cm)" hint="< 11.5 SAM, 11.5–12.4 MAM">
-                  <Input type="number" step="0.1" value={data.muac_cm ?? ""} onChange={(e) => upd("muac_cm", e.target.value)} />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={data.muac_cm ?? ""}
+                    onChange={(e) => upd("muac_cm", e.target.value)}
+                  />
                 </Field>
               </div>
             )}
             {type === "child_u5" && sec.key === "symptoms" && (
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Temperature (°C)">
-                  <Input type="number" step="0.1" value={data.temperature_c ?? ""} onChange={(e) => upd("temperature_c", e.target.value)} />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={data.temperature_c ?? ""}
+                    onChange={(e) => upd("temperature_c", e.target.value)}
+                  />
                 </Field>
                 <Field label="Cough (days)">
-                  <Input type="number" value={data.cough_days ?? ""} onChange={(e) => upd("cough_days", e.target.value)} />
+                  <Input
+                    type="number"
+                    value={data.cough_days ?? ""}
+                    onChange={(e) => upd("cough_days", e.target.value)}
+                  />
                 </Field>
-                <BoolRow label="Diarrhoea" value={data.diarrhea} onChange={(v) => upd("diarrhea", v)} />
-                <BoolRow label="Vomiting" value={data.vomiting} onChange={(v) => upd("vomiting", v)} />
+                <BoolRow
+                  label="Diarrhoea"
+                  value={data.diarrhea}
+                  onChange={(v) => upd("diarrhea", v)}
+                />
+                <BoolRow
+                  label="Vomiting"
+                  value={data.vomiting}
+                  onChange={(v) => upd("vomiting", v)}
+                />
               </div>
             )}
             {type === "child_u5" && sec.key === "feeding" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="Still breastfeeding" value={data.bf} onChange={(v) => upd("bf", v)} />
-                <BoolRow label="Complementary foods started" value={data.comp_food} onChange={(v) => upd("comp_food", v)} />
-                <BoolRow label="Eating 3+ meals per day" value={data.meals_ok} onChange={(v) => upd("meals_ok", v)} />
+                <BoolRow
+                  label="Still breastfeeding"
+                  value={data.bf}
+                  onChange={(v) => upd("bf", v)}
+                />
+                <BoolRow
+                  label="Complementary foods started"
+                  value={data.comp_food}
+                  onChange={(v) => upd("comp_food", v)}
+                />
+                <BoolRow
+                  label="Eating 3+ meals per day"
+                  value={data.meals_ok}
+                  onChange={(v) => upd("meals_ok", v)}
+                />
               </div>
             )}
             {type === "child_u5" && sec.key === "immun" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="Immunizations up to date" value={data.immun_uptodate} onChange={(v) => upd("immun_uptodate", v)} />
-                <BoolRow label="Developmental milestones on track" value={data.milestones_ok} onChange={(v) => upd("milestones_ok", v)} />
-                <BoolRow label="Vitamin A in last 6 months" value={data.vit_a} onChange={(v) => upd("vit_a", v)} />
-                <BoolRow label="Deworming in last 6 months" value={data.deworm} onChange={(v) => upd("deworm", v)} />
+                <BoolRow
+                  label="Immunizations up to date"
+                  value={data.immun_uptodate}
+                  onChange={(v) => upd("immun_uptodate", v)}
+                />
+                <BoolRow
+                  label="Developmental milestones on track"
+                  value={data.milestones_ok}
+                  onChange={(v) => upd("milestones_ok", v)}
+                />
+                <BoolRow
+                  label="Vitamin A in last 6 months"
+                  value={data.vit_a}
+                  onChange={(v) => upd("vit_a", v)}
+                />
+                <BoolRow
+                  label="Deworming in last 6 months"
+                  value={data.deworm}
+                  onChange={(v) => upd("deworm", v)}
+                />
               </div>
             )}
 
             {type === "nutrition" && sec.key === "diet" && (
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Meals per day">
-                  <Input type="number" value={data.meals_per_day ?? ""} onChange={(e) => upd("meals_per_day", e.target.value)} />
+                  <Input
+                    type="number"
+                    value={data.meals_per_day ?? ""}
+                    onChange={(e) => upd("meals_per_day", e.target.value)}
+                  />
                 </Field>
                 <Field label="Food groups consumed yesterday" hint="Check all that apply">
                   <div className="grid grid-cols-2 gap-1.5">
-                    {["Grains", "Legumes", "Dairy", "Meat/Fish", "Eggs", "Vegetables", "Fruit", "Oil"].map((g) => {
+                    {[
+                      "Grains",
+                      "Legumes",
+                      "Dairy",
+                      "Meat/Fish",
+                      "Eggs",
+                      "Vegetables",
+                      "Fruit",
+                      "Oil",
+                    ].map((g) => {
                       const arr: string[] = Array.isArray(data.food_groups) ? data.food_groups : [];
                       const on = arr.includes(g);
                       return (
                         <label key={g} className="flex items-center gap-2 text-sm">
-                          <Checkbox checked={on} onCheckedChange={(v) => {
-                            const next = v === true ? [...arr, g] : arr.filter((x) => x !== g);
-                            upd("food_groups", next);
-                          }} />
+                          <Checkbox
+                            checked={on}
+                            onCheckedChange={(v) => {
+                              const next = v === true ? [...arr, g] : arr.filter((x) => x !== g);
+                              upd("food_groups", next);
+                            }}
+                          />
                           {g}
                         </label>
                       );
@@ -752,60 +1136,147 @@ function FormStep({
             )}
             {type === "nutrition" && sec.key === "security" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="Household reports food insecurity" value={data.food_insecure} onChange={(v) => upd("food_insecure", v)} />
-                <BoolRow label="Access to clean water" value={data.clean_water} onChange={(v) => upd("clean_water", v)} />
-                <BoolRow label="Access to fuel for cooking" value={data.cooking_fuel} onChange={(v) => upd("cooking_fuel", v)} />
+                <BoolRow
+                  label="Household reports food insecurity"
+                  value={data.food_insecure}
+                  onChange={(v) => upd("food_insecure", v)}
+                />
+                <BoolRow
+                  label="Access to clean water"
+                  value={data.clean_water}
+                  onChange={(v) => upd("clean_water", v)}
+                />
+                <BoolRow
+                  label="Access to fuel for cooking"
+                  value={data.cooking_fuel}
+                  onChange={(v) => upd("cooking_fuel", v)}
+                />
               </div>
             )}
             {type === "nutrition" && sec.key === "special" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="Pregnant / breastfeeding" value={data.preg_bf} onChange={(v) => upd("preg_bf", v)} />
-                <BoolRow label="Iron/folate supplement taken" value={data.iron_folate} onChange={(v) => upd("iron_folate", v)} />
-                <BoolRow label="Iodized salt used" value={data.iodized_salt} onChange={(v) => upd("iodized_salt", v)} />
+                <BoolRow
+                  label="Pregnant / breastfeeding"
+                  value={data.preg_bf}
+                  onChange={(v) => upd("preg_bf", v)}
+                />
+                <BoolRow
+                  label="Iron/folate supplement taken"
+                  value={data.iron_folate}
+                  onChange={(v) => upd("iron_folate", v)}
+                />
+                <BoolRow
+                  label="Iodized salt used"
+                  value={data.iodized_salt}
+                  onChange={(v) => upd("iodized_salt", v)}
+                />
               </div>
             )}
 
             {type === "household" && sec.key === "composition" && (
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Number of household members">
-                  <Input type="number" value={data.members ?? ""} onChange={(e) => upd("members", e.target.value)} />
+                  <Input
+                    type="number"
+                    value={data.members ?? ""}
+                    onChange={(e) => upd("members", e.target.value)}
+                  />
                 </Field>
                 <Field label="Children under 5">
-                  <Input type="number" value={data.under5 ?? ""} onChange={(e) => upd("under5", e.target.value)} />
+                  <Input
+                    type="number"
+                    value={data.under5 ?? ""}
+                    onChange={(e) => upd("under5", e.target.value)}
+                  />
                 </Field>
               </div>
             )}
             {type === "household" && sec.key === "wash" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="No safe water access" value={data.no_safe_water} onChange={(v) => upd("no_safe_water", v)} />
-                <BoolRow label="No functional latrine" value={data.no_latrine} onChange={(v) => upd("no_latrine", v)} />
-                <BoolRow label="Hand-washing facilities available" value={data.handwash} onChange={(v) => upd("handwash", v)} />
-                <BoolRow label="Bed nets used consistently" value={data.bednets} onChange={(v) => upd("bednets", v)} />
+                <BoolRow
+                  label="No safe water access"
+                  value={data.no_safe_water}
+                  onChange={(v) => upd("no_safe_water", v)}
+                />
+                <BoolRow
+                  label="No functional latrine"
+                  value={data.no_latrine}
+                  onChange={(v) => upd("no_latrine", v)}
+                />
+                <BoolRow
+                  label="Hand-washing facilities available"
+                  value={data.handwash}
+                  onChange={(v) => upd("handwash", v)}
+                />
+                <BoolRow
+                  label="Bed nets used consistently"
+                  value={data.bednets}
+                  onChange={(v) => upd("bednets", v)}
+                />
               </div>
             )}
             {type === "household" && sec.key === "access" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="Long distance to facility (>1h)" value={data.long_distance} onChange={(v) => upd("long_distance", v)} />
-                <BoolRow label="Financial barriers to care" value={data.financial_hardship} onChange={(v) => upd("financial_hardship", v)} />
+                <BoolRow
+                  label="Long distance to facility (>1h)"
+                  value={data.long_distance}
+                  onChange={(v) => upd("long_distance", v)}
+                />
+                <BoolRow
+                  label="Financial barriers to care"
+                  value={data.financial_hardship}
+                  onChange={(v) => upd("financial_hardship", v)}
+                />
               </div>
             )}
             {type === "household" && sec.key === "concerns" && (
-              <Textarea rows={3} value={data.concerns ?? ""} onChange={(e) => upd("concerns", e.target.value)} placeholder="Health concerns raised by the household…" />
+              <Textarea
+                rows={3}
+                value={data.concerns ?? ""}
+                onChange={(e) => upd("concerns", e.target.value)}
+                placeholder="Health concerns raised by the household…"
+              />
             )}
 
             {type === "followup" && sec.key === "previous" && (
-              <Textarea rows={2} value={data.prior_summary ?? ""} onChange={(e) => upd("prior_summary", e.target.value)} placeholder="Brief note of previous assessment findings…" />
+              <Textarea
+                rows={2}
+                value={data.prior_summary ?? ""}
+                onChange={(e) => upd("prior_summary", e.target.value)}
+                placeholder="Brief note of previous assessment findings…"
+              />
             )}
             {type === "followup" && sec.key === "progress" && (
               <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="Recommendations followed" value={data.recommendations_followed} onChange={(v) => upd("recommendations_followed", v)} />
-                <BoolRow label="Condition improved" value={data.condition_improved} onChange={(v) => upd("condition_improved", v)} />
-                <BoolRow label="Condition unchanged" value={data.condition_same} onChange={(v) => upd("condition_same", v)} />
-                <BoolRow label="Condition worsened" value={data.condition_worsened} onChange={(v) => upd("condition_worsened", v)} />
+                <BoolRow
+                  label="Recommendations followed"
+                  value={data.recommendations_followed}
+                  onChange={(v) => upd("recommendations_followed", v)}
+                />
+                <BoolRow
+                  label="Condition improved"
+                  value={data.condition_improved}
+                  onChange={(v) => upd("condition_improved", v)}
+                />
+                <BoolRow
+                  label="Condition unchanged"
+                  value={data.condition_same}
+                  onChange={(v) => upd("condition_same", v)}
+                />
+                <BoolRow
+                  label="Condition worsened"
+                  value={data.condition_worsened}
+                  onChange={(v) => upd("condition_worsened", v)}
+                />
               </div>
             )}
             {type === "followup" && sec.key === "current" && (
-              <Textarea rows={3} value={data.current_condition ?? ""} onChange={(e) => upd("current_condition", e.target.value)} placeholder="Describe current condition and any new symptoms…" />
+              <Textarea
+                rows={3}
+                value={data.current_condition ?? ""}
+                onChange={(e) => upd("current_condition", e.target.value)}
+                placeholder="Describe current condition and any new symptoms…"
+              />
             )}
           </section>
         ))}
@@ -817,7 +1288,12 @@ function FormStep({
 /* ---------------- Step: review ---------------- */
 
 function ReviewStep({
-  person, type, data, dangerSigns, rules, previous,
+  person,
+  type,
+  data,
+  dangerSigns,
+  rules,
+  previous,
 }: {
   person: Person;
   type: AssessmentType;
@@ -834,7 +1310,9 @@ function ReviewStep({
         <div className="rounded-lg border p-3">
           <div className="text-xs text-muted-foreground">Client</div>
           <div className="font-medium">{person.full_name}</div>
-          <div className="text-xs text-muted-foreground">{calcAge(person.date_of_birth)} · {person.sex ?? "—"}</div>
+          <div className="text-xs text-muted-foreground">
+            {calcAge(person.date_of_birth)} · {person.sex ?? "—"}
+          </div>
         </div>
         <div className="rounded-lg border p-3">
           <div className="text-xs text-muted-foreground">Assessment</div>
@@ -843,54 +1321,91 @@ function ReviewStep({
         </div>
       </div>
 
-      <div className={cn(
-        "rounded-xl border p-4",
-        pr.tone === "destructive" && "border-destructive/40 bg-destructive/5",
-        pr.tone === "warning" && "border-warning/40 bg-warning/5",
-        pr.tone === "info" && "border-info/40 bg-info/5",
-        pr.tone === "success" && "border-success/40 bg-success/5",
-      )}>
-        <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Rules-based priority</div>
+      <div
+        className={cn(
+          "rounded-xl border p-4",
+          pr.tone === "destructive" && "border-destructive/40 bg-destructive/5",
+          pr.tone === "warning" && "border-warning/40 bg-warning/5",
+          pr.tone === "info" && "border-info/40 bg-info/5",
+          pr.tone === "success" && "border-success/40 bg-success/5",
+        )}
+      >
+        <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Rules-based priority
+        </div>
         <div className="text-lg font-bold mt-1">{pr.label}</div>
         <div className="text-xs text-muted-foreground mt-1">{pr.description}</div>
         {rules.flags.length > 0 && (
-          <ul className="mt-3 text-sm space-y-1">{rules.flags.map((f) => <li key={f.code}>• {f.message}</li>)}</ul>
+          <ul className="mt-3 text-sm space-y-1">
+            {rules.flags.map((f) => (
+              <li key={f.code}>• {f.message}</li>
+            ))}
+          </ul>
         )}
       </div>
 
       {dangerSigns.length > 0 && (
         <div className="rounded-xl border p-4">
-          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Danger signs reported</div>
+          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+            Danger signs reported
+          </div>
           <ul className="text-sm space-y-1">
-            {DANGER_SIGNS[type].filter((s) => dangerSigns.includes(s.key)).map((s) => (
-              <li key={s.key}>• {s.label}{s.critical && <span className="text-destructive ml-2 text-xs uppercase tracking-widest">critical</span>}</li>
-            ))}
+            {DANGER_SIGNS[type]
+              .filter((s) => dangerSigns.includes(s.key))
+              .map((s) => (
+                <li key={s.key}>
+                  • {s.label}
+                  {s.critical && (
+                    <span className="text-destructive ml-2 text-xs uppercase tracking-widest">
+                      critical
+                    </span>
+                  )}
+                </li>
+              ))}
           </ul>
         </div>
       )}
 
       {rules.missing.length > 0 && (
         <div className="rounded-xl border p-4">
-          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Missing information</div>
-          <ul className="text-sm space-y-1 text-muted-foreground">{rules.missing.map((m) => <li key={m}>• {m}</li>)}</ul>
+          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+            Missing information
+          </div>
+          <ul className="text-sm space-y-1 text-muted-foreground">
+            {rules.missing.map((m) => (
+              <li key={m}>• {m}</li>
+            ))}
+          </ul>
         </div>
       )}
 
       {previous && (
         <div className="rounded-xl border p-4 bg-accent/20">
-          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Previous assessment</div>
-          <div className="text-sm">{new Date(previous.date).toLocaleDateString()} · {previous.type} · {previous.risk_level ?? "—"}</div>
-          {previous.summary && <div className="text-xs text-muted-foreground mt-1">{previous.summary}</div>}
+          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+            Previous assessment
+          </div>
+          <div className="text-sm">
+            {new Date(previous.date).toLocaleDateString()} · {previous.type} ·{" "}
+            {previous.risk_level ?? "—"}
+          </div>
+          {previous.summary && (
+            <div className="text-xs text-muted-foreground mt-1">{previous.summary}</div>
+          )}
         </div>
       )}
 
       <details className="rounded-xl border p-4">
-        <summary className="text-sm font-medium cursor-pointer">Recorded data ({Object.keys(data).length} fields)</summary>
-        <pre className="text-[11px] mt-3 whitespace-pre-wrap text-muted-foreground max-h-64 overflow-auto">{JSON.stringify(data, null, 2)}</pre>
+        <summary className="text-sm font-medium cursor-pointer">
+          Recorded data ({Object.keys(data).length} fields)
+        </summary>
+        <pre className="text-[11px] mt-3 whitespace-pre-wrap text-muted-foreground max-h-64 overflow-auto">
+          {JSON.stringify(data, null, 2)}
+        </pre>
       </details>
 
       <div className="text-xs text-muted-foreground">
-        Submitting will run AI-assisted review. The AI provides decision support only — clinical judgment stays with the health worker.
+        Submitting will run AI-assisted review. The AI provides decision support only — clinical
+        judgment stays with the health worker.
       </div>
     </div>
   );

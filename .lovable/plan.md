@@ -7,6 +7,7 @@ The spec covers ~4 full modules. I'll ship it in 4 focused turns so each slice i
 The connective tissue everything else hangs off. After this turn the demo journey Community → Household → Person → Assessment → Result → Referral → Follow-up → Outcome works end-to-end against the database.
 
 **Backend (one migration):**
+
 - `facilities` — name, type (CHPS/health centre/district/regional/specialist), district, region, contact, services[], location
 - `referrals` — extend existing table with: `category`, `facility_id`, `assessment_id`, `symptoms`, `findings`, `requested_service`, `status` (draft/submitted/acknowledged/accepted/in_progress/completed/declined/cancelled), `created_by`, `submitted_at`, `acknowledged_at`, `completed_at`
 - `referral_status_history` — referral_id, from_status, to_status, actor, note, at
@@ -18,11 +19,13 @@ The connective tissue everything else hangs off. After this turn the demo journe
 - RLS: CHPS worker sees own records; supervisor/admin via `has_role`. GRANTs on every table.
 
 **Data layer (`src/lib/`):**
+
 - `referrals.functions.ts` — list, get, create (from assessment/person), updateStatus, submit, acknowledge, recordOutcome
 - `follow-ups.functions.ts` — list (today/upcoming/overdue/completed), get, create, recordAttempt, complete
 - `facilities.functions.ts` — list, get, search
 
 **Routes (new + wired):**
+
 - `src/routes/referral.new.tsx` — create-referral wizard, prefill from `?person=`/`?assessment=` search params, facility selector, category/priority/reason, review + confirm checkbox
 - `src/routes/referral.$id.tsx` — details, status timeline, actions (submit/acknowledge/complete), record outcome, "Schedule follow-up" CTA
 - `src/routes/referrals.tsx` — replace demo list with live dashboard (summary cards, filters by status/priority/community/facility/date, sort)
@@ -36,18 +39,21 @@ The connective tissue everything else hangs off. After this turn the demo journe
 - Breadcrumbs preserved across all detail pages.
 
 ### Turn 2 — Community module deep build
+
 - `src/routes/community.new.tsx` — full create workflow (basic/location/health service/community info/status), region + district + sub-district + CHPS zone, assigned worker/supervisor/nearest facility, primary languages, common challenges, accessibility, draft.
 - `src/routes/communities.tsx` — add region/district/CHPS zone/status filters, sort, coverage %, "data coverage incomplete" indicator.
 - `src/routes/community.$id.tsx` — add Health Insights tab with charts (risk distribution, maternal/child/nutrition indicators, referral stats), Activity timeline, coverage widgets.
 - Migration: extend `communities` with region, sub_district, chps_zone, chps_facility_id, supervisor_id, nearest_referral_facility_id, gps_lat, gps_lng, location_desc, primary_languages[], common_health_challenges[], accessibility, status, community_code.
 
 ### Turn 3 — Household module deep build
+
 - `src/routes/register.household.tsx` — expand to 6 sections (identification, location + "Capture Current Location", composition, living conditions, social/health barriers, notes), duplicate detection (household number / community / phone / head), completeness %, draft.
 - `src/routes/household.$id.tsx` — priority badges, all tabs (members, visits, assessments, referrals, follow-ups, notes), health summary card distinguishing Known/Unknown/Missing, "Start Household Visit" workflow (multi-step).
 - `src/routes/households.tsx` — priority/visit/follow-up filters, sort, pagination polish.
 - Migration: extend `households` with priority_status, address_description, gps, location_notes, composition breakdown, living conditions, barriers, next_follow_up_at, data_completeness helper.
 
 ### Turn 4 — People module deep build + role-based access polish
+
 - `src/routes/register.person.tsx` — 6-step wizard (household select → basic → identification → social → profile types[] → initial health), auto-age from DOB, duplicate detection, draft.
 - `src/routes/person.$id.tsx` — full profile with conditional Maternal / Newborn / Child Health tabs based on profile types, completeness %, priority summary with contributing factors + missing info + "decision-support, not diagnosis" notice.
 - `src/routes/people.tsx` — age group / profile / priority / follow-up filters.

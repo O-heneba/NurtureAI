@@ -39,7 +39,9 @@ function ForgotPassword() {
           <div className="font-bold">NurtureAI</div>
         </div>
         <h1 className="text-2xl font-bold">Reset password</h1>
-        <p className="text-sm text-muted-foreground mt-1">Enter your email and we'll send you a link to reset it.</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Enter your email and we'll send you a link to reset it.
+        </p>
 
         {sent ? (
           <div className="mt-6 rounded-xl border p-4 text-sm">
@@ -49,7 +51,12 @@ function ForgotPassword() {
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div className="space-y-1.5">
               <Label>Email</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <Button type="submit" className="w-full rounded-xl" disabled={loading}>
               {loading ? "Sending…" : "Send reset link"}
@@ -58,7 +65,9 @@ function ForgotPassword() {
         )}
 
         <div className="mt-6 text-center text-xs text-muted-foreground">
-          <Link to="/login" className="text-primary font-medium hover:underline">Back to sign in</Link>
+          <Link to="/login" className="text-primary font-medium hover:underline">
+            Back to sign in
+          </Link>
         </div>
       </Card>
     </div>
