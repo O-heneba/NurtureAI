@@ -740,7 +740,7 @@ export const syncQueueStore = {
  * Utility: Get all unsynced or failed records across all entity types
  */
 export async function getAllUnsyncedRecords() {
-  const [households, persons, pregnancies, childProfiles, assessments, referrals, followUps, personNotes] =
+  const [households, persons, pregnancies, childProfiles, assessments, referrals, followUps, followUpAttempts, followUpOutcomes, personNotes] =
     await Promise.all([
       householdStore.listUnsyncedOrFailed(),
       personStore.listUnsyncedOrFailed(),
@@ -749,6 +749,8 @@ export async function getAllUnsyncedRecords() {
       assessmentStore.listUnsyncedOrFailed(),
       referralStore.listUnsyncedOrFailed(),
       followUpStore.listUnsyncedOrFailed(),
+      db.follow_up_attempts.where("syncStatus").anyOf("pending", "failed").toArray(),
+      db.follow_up_outcomes.where("syncStatus").anyOf("pending", "failed").toArray(),
       personNotesStore.listUnsyncedOrFailed(),
     ]);
 
@@ -760,6 +762,8 @@ export async function getAllUnsyncedRecords() {
     assessments,
     referrals,
     followUps,
+    followUpAttempts,
+    followUpOutcomes,
     personNotes,
   };
 }
@@ -777,6 +781,8 @@ export async function getUnsyncedCount(): Promise<number> {
     unsyncedRecords.assessments.length +
     unsyncedRecords.referrals.length +
     unsyncedRecords.followUps.length +
+    unsyncedRecords.followUpAttempts.length +
+    unsyncedRecords.followUpOutcomes.length +
     unsyncedRecords.personNotes.length
   );
 }

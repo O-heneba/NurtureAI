@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "./db";
 import { syncQueueStore } from "./local-store";
+import { networkMonitor, type NetworkStatus } from "./network-monitor";
+import { DEFAULT_BATCH_SIZE, listReadyQueue } from "./queue";
+import { getSyncStatusRecord, updateSyncStatus } from "./sync-status";
 import type { LocalEntity, SyncQueueOperation, SyncQueueOperationType } from "./types";
 
 export type SyncEntityType =
@@ -23,7 +26,14 @@ export interface SyncStatusSnapshot {
   conflicts: number;
   lastSyncAt: string | null;
   lastError: string | null;
+  event: SyncEvent;
+  progress: { completed: number; total: number };
+  lastSuccessfulSync: string | null;
 }
+
+export type SyncEvent = "idle" | "syncing" | "success" | "failed" | "waiting-network";
+
+export type SyncListener = (snapshot: SyncStatusSnapshot) => void;
 
 const syncOrder: SyncEntityType[] = [
   "households",
@@ -171,7 +181,8 @@ function isPermanentError(error: any): boolean {
 }
 
 function backoff(attemptCount: number): string {
-  const delay = Math.min(60 * 60 * 1000, 1000 * 2 ** Math.min(attemptCount, 10));
+  const delays = [60_000, 5 * 60_000, 15 * 60_000, 60 * 60_000, 6 * 60 * 60_000, 24 * 60 * 60_000];
+  const delay = delays[Math.min(attemptCount - 1, delays.length - 1)];
   return new Date(Date.now() + delay).toISOString();
 }
 
@@ -323,9 +334,13 @@ async function performOperation(operation: SyncQueueOperation, client: SupabaseC
 
 export class SyncManager {
   private readonly client: SupabaseClientLike;
+  private readonly batchSize: number;
   private running = false;
   private syncing = false;
   private onlineHandler?: () => void;
+  private unsubscribeNetwork?: () => void;
+  private listeners = new Set<SyncListener>();
+  private queuedTrigger = false;
   private snapshot: SyncStatusSnapshot = {
     running: false,
     online: true,
@@ -334,68 +349,128 @@ export class SyncManager {
     conflicts: 0,
     lastSyncAt: null,
     lastError: null,
+    event: "idle",
+    progress: { completed: 0, total: 0 },
+    lastSuccessfulSync: null,
   };
 
-  constructor(client: SupabaseClientLike = supabase as unknown as SupabaseClientLike) {
+  constructor(
+    client: SupabaseClientLike = supabase as unknown as SupabaseClientLike,
+    options: { batchSize?: number } = {},
+  ) {
     this.client = client;
+    this.batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
   }
 
   start(): void {
     if (this.running || typeof window === "undefined") return;
     this.running = true;
-    this.onlineHandler = () => void this.syncNow();
-    window.addEventListener("online", this.onlineHandler);
-    this.snapshot = { ...this.snapshot, running: true, online: navigator.onLine };
-    if (navigator.onLine) void this.syncNow();
+    this.onlineHandler = () => this.scheduleSync();
+    networkMonitor.start();
+    this.unsubscribeNetwork = networkMonitor.subscribe((status) => this.handleNetwork(status));
+    this.snapshot = { ...this.snapshot, running: true, online: networkMonitor.isOnline() };
+    void this.refreshStatus();
+    if (networkMonitor.isOnline()) this.scheduleSync();
   }
 
   stop(): void {
-    if (this.onlineHandler && typeof window !== "undefined") {
-      window.removeEventListener("online", this.onlineHandler);
-    }
+    if (this.onlineHandler && typeof window !== "undefined") window.removeEventListener("online", this.onlineHandler);
+    this.unsubscribeNetwork?.();
+    this.unsubscribeNetwork = undefined;
     this.onlineHandler = undefined;
     this.running = false;
-    this.snapshot = { ...this.snapshot, running: false };
+    this.snapshot = { ...this.snapshot, running: false, event: "idle" };
+    this.emit();
   }
 
   async syncNow(): Promise<SyncStatusSnapshot> {
-    if (this.syncing || (typeof navigator !== "undefined" && navigator.onLine === false)) {
+    if (this.syncing) {
+      this.queuedTrigger = true;
+      return this.getStatus();
+    }
+    if (this.running && !networkMonitor.isOnline()) {
+      this.setEvent("waiting-network", { online: false });
+      await this.refreshStatus();
       return this.getStatus();
     }
     this.syncing = true;
-    this.snapshot = { ...this.snapshot, online: true, lastError: null };
+    const startedAt = Date.now();
+    const before = await syncQueueStore.count();
+    this.snapshot = { ...this.snapshot, online: true, lastError: null, event: "syncing", progress: { completed: 0, total: before } };
+    await updateSyncStatus({ lastSyncStartedAt: new Date(startedAt).toISOString(), currentlySyncing: true, networkStatus: "online", queueLengthBefore: before });
+    this.emit();
+    let completed = 0;
     try {
       await enqueuePersistedTombstones();
-      const now = Date.now();
-      const operations = (await syncQueueStore.list())
-        .filter(
-          (operation) =>
-            ["pending", "failed"].includes(operation.syncStatus) &&
-            (!operation.retryAfter || Date.parse(operation.retryAfter) <= now),
-        )
-        .sort(
-          (left, right) => {
-            const entityOrder =
-              syncOrder.indexOf(left.entityType as SyncEntityType) -
-              syncOrder.indexOf(right.entityType as SyncEntityType);
-            if (entityOrder !== 0) return entityOrder;
-            const operationOrder = { create: 0, update: 1, delete: 2 };
-            return operationOrder[left.operationType] - operationOrder[right.operationType];
-          },
-        );
-      for (const operation of operations) await this.process(operation);
-      this.snapshot = { ...this.snapshot, lastSyncAt: new Date().toISOString() };
+      while (!this.running || networkMonitor.isOnline()) {
+        const operations = await listReadyQueue(this.batchSize);
+        if (operations.length === 0) break;
+        for (const operation of operations) {
+          await this.process(operation);
+          completed += 1;
+        }
+        this.snapshot = { ...this.snapshot, progress: { completed, total: Math.max(before, completed) } };
+        this.emit();
+      }
+      const completedAt = new Date().toISOString();
+      const remaining = await syncQueueStore.list();
+      const hasFailure = remaining.some((operation) => operation.syncStatus === "failed");
+      this.snapshot = { ...this.snapshot, lastSyncAt: completedAt, lastSuccessfulSync: hasFailure ? this.snapshot.lastSuccessfulSync : completedAt, event: hasFailure ? "failed" : "success" };
+      const stored = await getSyncStatusRecord();
+      await updateSyncStatus({ lastSyncCompletedAt: completedAt, lastSuccessfulSync: hasFailure ? stored.lastSuccessfulSync : completedAt, currentlySyncing: false, syncedCount: completed, totalUploaded: stored.totalUploaded + completed, lastDurationMs: Date.now() - startedAt, queueLengthAfter: remaining.length });
     } catch (error) {
       this.snapshot = { ...this.snapshot, lastError: error instanceof Error ? error.message : String(error) };
+      this.setEvent("failed");
     } finally {
       this.syncing = false;
       await this.refreshStatus();
+      if (this.queuedTrigger) {
+        this.queuedTrigger = false;
+        void this.syncNow();
+      }
     }
     return this.getStatus();
   }
 
   getStatus(): SyncStatusSnapshot {
     return { ...this.snapshot };
+  }
+
+  isRunning(): boolean {
+    return this.running;
+  }
+
+  subscribe(listener: SyncListener): () => void {
+    this.listeners.add(listener);
+    listener(this.getStatus());
+    return () => this.listeners.delete(listener);
+  }
+
+  private scheduleSync(): void {
+    if (!this.running) return;
+    if (this.syncing) {
+      this.queuedTrigger = true;
+      return;
+    }
+    void this.syncNow();
+  }
+
+  private handleNetwork(status: NetworkStatus): void {
+    this.snapshot = { ...this.snapshot, online: status === "online" };
+    if (status === "offline") this.setEvent("waiting-network");
+    else if (this.running) this.scheduleSync();
+    this.emit();
+  }
+
+  private setEvent(event: SyncEvent, updates: Partial<SyncStatusSnapshot> = {}): void {
+    this.snapshot = { ...this.snapshot, ...updates, event };
+    this.emit();
+  }
+
+  private emit(): void {
+    const snapshot = this.getStatus();
+    for (const listener of this.listeners) listener(snapshot);
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("nurture-sync-status", { detail: snapshot }));
   }
 
   private async process(operation: SyncQueueOperation): Promise<void> {
@@ -421,6 +496,11 @@ export class SyncManager {
         lastError: message,
         retryAfter: permanent ? null : backoff(attemptCount),
       });
+      const metrics = await getSyncStatusRecord();
+      await updateSyncStatus({
+        totalFailed: metrics.totalFailed + 1,
+        totalRetried: metrics.totalRetried + (attemptCount > 1 ? 1 : 0),
+      });
       await updateRecordStatus(operation, { syncStatus: "failed", syncError: message });
       if (error instanceof DependencyPendingError) return;
     }
@@ -434,6 +514,12 @@ export class SyncManager {
       failed: operations.filter((operation) => operation.syncStatus === "failed").length,
       conflicts: operations.filter((operation) => operation.syncStatus === "conflict").length,
     };
+    await updateSyncStatus({
+      currentlySyncing: this.syncing,
+      pendingCount: this.snapshot.pending,
+      failedCount: this.snapshot.failed,
+      networkStatus: this.snapshot.online ? "online" : "offline",
+    });
     if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("nurture-sync-status"));
   }
 }

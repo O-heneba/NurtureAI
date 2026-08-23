@@ -37,6 +37,7 @@ import type {
   LocalPersonNotes,
   SyncQueueOperation,
 } from "./types";
+import type { SyncStatusRecord } from "./sync-status";
 
 /**
  * NurtureAI IndexedDB database
@@ -54,6 +55,7 @@ export class NurtureDB extends Dexie {
   follow_up_outcomes!: Table<LocalFollowUpOutcome>;
   person_notes!: Table<LocalPersonNotes>;
   sync_queue!: Table<SyncQueueOperation>;
+  sync_status!: Table<SyncStatusRecord>;
 
   constructor() {
     super("nurture-db");
@@ -73,6 +75,7 @@ export class NurtureDB extends Dexie {
       // Sync queue
       sync_queue: "&id, syncStatus, priority, queuedAt, retryAfter",
     });
+    this.version(2).stores({ sync_status: "&id" });
   }
 }
 
