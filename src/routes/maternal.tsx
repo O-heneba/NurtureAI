@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { HeartPulse, Plus, Calendar, AlertTriangle, Baby } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { listPregnancies } from "@/lib/registrations";
+import { listPersons, listPregnancies } from "@/lib/registrations";
 
 export const Route = createFileRoute("/maternal")({
   component: Maternal,
@@ -21,15 +21,28 @@ type PregnancyRow = {
   status: string | null;
   notes: string | null;
   gravida: number | null;
+  parity: number | null;
+  gestation_weeks: number | null;
+  blood_pressure: string | null;
+  weight_kg: number | null;
+  created_at: string;
 };
+
+function noteValue(notes: string | null, label: string): string | null {
+  return notes?.match(new RegExp(`${label}:\\s*([^|]+)`, "i"))?.[1]?.trim() ?? null;
+}
 
 function Maternal() {
   const [pregnancies, setPregnancies] = useState<PregnancyRow[]>([]);
+  const [personNames, setPersonNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listPregnancies()
-      .then((rows) => setPregnancies(rows.map((row) => ({ ...row, gravida: null }))))
+    Promise.all([listPregnancies(), listPersons()])
+      .then(([rows, persons]) => {
+        setPregnancies(rows as PregnancyRow[]);
+        setPersonNames(Object.fromEntries(persons.map((person) => [person.id, person.full_name])));
+      })
       .catch(() => setPregnancies([]))
       .finally(() => setLoading(false));
   }, []);
@@ -59,7 +72,15 @@ function Maternal() {
         title="Maternal Care"
         description="Pregnancy registrations and ANC follow-up"
         actions={
-          <Link to="/register/pregnancy">
+          <Link
+            to="/register/pregnancy"
+            search={{
+              person_id: undefined,
+              person_name: undefined,
+              person_sex: undefined,
+              person_dob: undefined,
+            }}
+          >
             <Button className="rounded-xl">
               <Plus className="mr-1 h-4 w-4" /> Register pregnancy
             </Button>
@@ -105,16 +126,19 @@ function Maternal() {
           {pregnancies.map((p) => {
             const lmp = p.lmp_date ? new Date(p.lmp_date) : null;
             const now = new Date();
-            const weeks = lmp
+            const noteGestation = noteValue(p.notes, "GA")?.replace(/\s*w(?:eeks?)?$/i, "");
+            const weeks = p.gestation_weeks ?? (noteGestation ? Number(noteGestation) : null) ?? (lmp
               ? Math.max(0, Math.floor((now.getTime() - lmp.getTime()) / (1000 * 60 * 60 * 24 * 7)))
-              : 0;
+              : 0);
+            const bloodPressure = p.blood_pressure ?? noteValue(p.notes, "BP");
+            const weight = p.weight_kg ?? Number(noteValue(p.notes, "Weight")?.replace(/\s*kg$/i, ""));
             const pct = Math.min(100, Math.round((weeks / 40) * 100));
             return (
               <Link key={p.id} to="/pregnancy/$id" params={{ id: p.id }} className="contents">
                 <Card className="rounded-xl card-elevated hover-lift cursor-pointer">
                   <CardHeader className="flex-row items-start justify-between pb-3">
                     <div>
-                      <CardTitle className="text-base">Pregnancy ID {p.id.slice(0, 8)}</CardTitle>
+                      <CardTitle className="text-base">{personNames[p.person_id] ?? `Pregnancy ID ${p.id.slice(0, 8)}`}</CardTitle>
                       <div className="text-xs text-muted-foreground mt-0.5">
                         Status: {p.status || "Unknown"}
                       </div>
@@ -134,7 +158,7 @@ function Maternal() {
                         <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                           ANC visits
                         </div>
-                        <div className="font-semibold mt-0.5">{p.anc_visits ?? 0} recorded</div>
+                        <div className="font-semibold mt-0.5">{p.anc_visits ?? 0} recorded · G{p.gravida ?? "-"} P{p.parity ?? "-"}</div>
                       </div>
                       <div>
                         <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -142,6 +166,10 @@ function Maternal() {
                         </div>
                         <div className="text-sm mt-0.5">{p.edd_date || "Not set"}</div>
                       </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 border-t pt-2 text-sm">
+                      <div><div className="text-[11px] uppercase tracking-wide text-muted-foreground">BP</div><div className="font-semibold mt-0.5">{bloodPressure ?? "Not recorded"}</div></div>
+                      <div><div className="text-[11px] uppercase tracking-wide text-muted-foreground">Weight</div><div className="font-semibold mt-0.5">{Number.isFinite(weight) ? `${weight} kg` : "Not recorded"}</div></div>
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {p.notes || "No additional notes."}

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,9 +18,17 @@ import { CheckCircle2, Loader2, Save, Users, AlertTriangle } from "lucide-react"
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { createWorkflowPerson, listWorkflowHouseholds, listWorkflowPersons } from "@/lib/household-person.service";
+import {
+  createWorkflowPerson,
+  listWorkflowHouseholds,
+  listWorkflowPersons,
+} from "@/lib/household-person.service";
+import { formatDisplayDate, parseDisplayDate } from "@/lib/date-format";
 
 export const Route = createFileRoute("/register/person")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    household_id: typeof s.household_id === "string" ? s.household_id : undefined,
+  }),
   component: RegisterPerson,
 });
 
@@ -39,7 +47,7 @@ const schema = z.object({
   household_id: z.string().uuid("Select a household"),
   full_name: z.string().trim().min(2, "Full name required").max(60),
   sex: z.enum(["F", "M"], { message: "Select gender" }),
-  date_of_birth: z.string().min(1, "Date of birth required"),
+  date_of_birth: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Use DD/MM/YYYY"),
   phone: z
     .string()
     .trim()
@@ -83,9 +91,14 @@ const initialState: PersonFormState = {
 
 function RegisterPerson() {
   const navigate = useNavigate();
-  const [values, setValues] = useState<PersonFormState>(initialState);
+  const { household_id } = useSearch({ from: "/register/person" });
+  const [values, setValues] = useState<PersonFormState>(() => ({
+    ...initialState,
+    household_id: household_id ?? "",
+  }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
+  const [savedPersonId, setSavedPersonId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(0);
   const [households, setHouseholds] = useState<
@@ -164,7 +177,7 @@ function RegisterPerson() {
         household_id: r.data.household_id,
         full_name: r.data.full_name,
         sex: r.data.sex,
-        date_of_birth: r.data.date_of_birth,
+        date_of_birth: parseDisplayDate(r.data.date_of_birth),
         phone: r.data.phone,
         national_id: r.data.national_id,
         preferred_name: r.data.preferred_name,
@@ -178,7 +191,12 @@ function RegisterPerson() {
         notes: r.data.notes,
       });
       setDone(true);
-      toast.success(saved.workflowStatus === "pending" ? "Person saved locally · pending sync" : "Person registered");
+      setSavedPersonId(saved.id);
+      toast.success(
+        saved.workflowStatus === "pending"
+          ? "Person saved locally · pending sync"
+          : "Person registered",
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -213,6 +231,41 @@ function RegisterPerson() {
               >
                 Register another
               </Button>
+              {values.profile_types[0] === "Maternal" && (
+                <Button
+                  onClick={() =>
+                    navigate({
+                      to: "/register/pregnancy",
+                      search: {
+                        person_id: savedPersonId ?? undefined,
+                        person_name: values.full_name,
+                        person_sex: values.sex,
+                        person_dob: values.date_of_birth,
+                      },
+                    })
+                  }
+                >
+                  Create pregnancy
+                </Button>
+              )}
+              {values.profile_types[0] === "Child Health" && (
+                <Button
+                  onClick={() =>
+                    navigate({
+                      to: "/register/child",
+                      search: {
+                        person_id: savedPersonId ?? undefined,
+                        person_name: values.full_name,
+                        person_sex: values.sex,
+                        person_dob: values.date_of_birth,
+                        household_id: values.household_id,
+                      },
+                    })
+                  }
+                >
+                  Create child record
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -294,11 +347,26 @@ function RegisterPerson() {
                 </Select>
               </Field>
               <Field label="Date of birth" required error={errors.date_of_birth}>
-                <Input
-                  type="date"
-                  value={values.date_of_birth}
-                  onChange={(e) => set("date_of_birth", e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="DD/MM/YYYY"
+                    inputMode="numeric"
+                    value={values.date_of_birth}
+                    onChange={(e) => set("date_of_birth", e.target.value)}
+                  />
+                  <Input
+                    type="date"
+                    aria-label="Pick date of birth from calendar"
+                    className="w-12 shrink-0 px-2"
+                    value={
+                      parseDisplayDate(values.date_of_birth).match(/^\d{4}-\d{2}-\d{2}$/)
+                        ? parseDisplayDate(values.date_of_birth)
+                        : ""
+                    }
+                    onChange={(e) => set("date_of_birth", formatDisplayDate(e.target.value))}
+                  />
+                </div>
               </Field>
               {age !== null && (
                 <div className="text-sm text-muted-foreground pt-7">Age: {age} years</div>
@@ -409,9 +477,7 @@ function RegisterPerson() {
                       <Checkbox
                         checked={values.profile_types.includes(option)}
                         onCheckedChange={(checked) => {
-                          const newTypes = checked
-                            ? [...values.profile_types, option]
-                            : values.profile_types.filter((t) => t !== option);
+                          const newTypes = checked ? [option] : [];
                           set("profile_types", newTypes);
                         }}
                       />

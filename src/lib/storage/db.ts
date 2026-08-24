@@ -26,6 +26,7 @@
 import Dexie, { type Table } from "dexie";
 import type {
   LocalHousehold,
+  LocalCommunity,
   LocalPerson,
   LocalPregnancy,
   LocalChildProfile,
@@ -48,6 +49,7 @@ import type { SyncStatusRecord } from "./sync-status";
  * Contains all tables needed for offline health workflows and sync queue
  */
 export class NurtureDB extends Dexie {
+  communities!: Table<LocalCommunity>;
   households!: Table<LocalHousehold>;
   persons!: Table<LocalPerson>;
   pregnancies!: Table<LocalPregnancy>;
@@ -89,6 +91,9 @@ export class NurtureDB extends Dexie {
       referral_status_history: "&localId, referral_id, at, syncStatus",
       referral_outcomes: "&localId, referral_id, syncStatus",
       sync_conflict_history: "&id, entityType, localId, remoteId, resolvedAt, synchronizationStatus",
+    });
+    this.version(5).stores({
+      communities: "&localId, remoteId, syncStatus, updatedAt, region, district",
     });
   }
 }

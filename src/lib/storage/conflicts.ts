@@ -32,6 +32,7 @@ export const conflictStore = {
 };
 
 const tables: Record<string, { get: (id: string) => Promise<LocalEntity | undefined>; put: (value: LocalEntity) => Promise<unknown> }> = {
+  communities: db.communities as any,
   households: db.households as any,
   persons: db.persons as any,
   pregnancies: db.pregnancies as any,

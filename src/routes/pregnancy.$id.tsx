@@ -1,41 +1,82 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader, RiskBadge, EmptyState, StatCard, AIRecommendationCard } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { HeartPulse, Calendar, Send, Activity, Scale } from "lucide-react";
-import { getPerson, getPregnancy } from "@/lib/registrations";
-import { ancHistory } from "@/lib/demo-data";
+import { getCommunity, getPerson, getPregnancy } from "@/lib/registrations";
+import { listAssessmentsForPerson } from "@/lib/assessments";
+import { getWorkflowHousehold } from "@/lib/household-person.service";
+import { useEffect } from "react";
 
-type AncVisit = { visit: string; date: string; bp: string; weight: string; notes: string };
+type AncVisit = { id: string; date: string; gestation: string; bp: string; weight: string; risk: string; notes: string };
+
+function noteValue(notes: string | null, label: string): string | null {
+  return notes?.match(new RegExp(`${label}:\\s*([^|]+)`, "i"))?.[1]?.trim() ?? null;
+}
 
 export const Route = createFileRoute("/pregnancy/$id")({
   loader: async ({ params }) => {
     const pr = await getPregnancy(params.id);
     if (!pr) throw notFound();
     const person = await getPerson(pr.person_id);
-    const gestation = pr.lmp_date
+    const household = person?.household_id ? await getWorkflowHousehold(person.household_id) : null;
+    const community = household?.community_id ? await getCommunity(household.community_id) : null;
+    const assessments = await listAssessmentsForPerson(pr.person_id);
+    const maternalAssessments = assessments.filter((assessment) => assessment.assessment_type === "maternal");
+    const latestAssessment = maternalAssessments[0];
+    const latestData = latestAssessment?.inputs?.sections ?? {};
+    const previousPregnancies = pr.notes?.match(/(?:^|\| )Prev: ([^|]+)/)?.[1]?.trim() ?? "Not recorded";
+    const historyGravidaPara = previousPregnancies.match(/^G\s*(\d+)\s*P\s*(\d+)$/i);
+    const registeredGestation = pr.gestation_weeks ?? Number(noteValue(pr.notes, "GA")?.replace(/\s*w(?:eeks?)?$/i, ""));
+    const registeredBloodPressure = pr.blood_pressure ?? noteValue(pr.notes, "BP");
+    const registeredWeight = pr.weight_kg ?? Number(noteValue(pr.notes, "Weight")?.replace(/\s*kg$/i, ""));
+    const gestation = Number(latestData.gestation_weeks ?? pr.gestation_weeks) || (pr.lmp_date
       ? Math.max(0, Math.floor((Date.now() - new Date(pr.lmp_date).getTime()) / 604800000))
-      : 0;
+      : 0);
     const age = person?.date_of_birth
       ? Math.max(0, new Date().getFullYear() - new Date(person.date_of_birth).getFullYear())
       : 0;
-    const risk = pr.status === "urgent" || pr.status === "high" ? "high" : "routine";
+    const risk = latestAssessment?.risk_level ?? (pr.status === "urgent" || pr.status === "high" ? "high" : "routine");
+    const anc: AncVisit[] = [
+      {
+        id: pr.id,
+        date: pr.created_at,
+        gestation: registeredGestation != null && Number.isFinite(registeredGestation) ? String(registeredGestation) : "Not recorded",
+        bp: registeredBloodPressure ?? "Not recorded",
+        weight: Number.isFinite(registeredWeight) ? String(registeredWeight) : "Not recorded",
+        risk: pr.status ?? "routine",
+        notes: pr.notes ?? "Pregnancy registration",
+      },
+      ...maternalAssessments.map((assessment) => {
+      const data = assessment.inputs?.sections ?? {};
+      return { id: assessment.id, date: assessment.created_at, gestation: String(data.gestation_weeks ?? "Not recorded"), bp: String(data.blood_pressure ?? "Not recorded"), weight: String(data.weight_kg ?? "Not recorded"), risk: assessment.risk_level ?? "routine", notes: assessment.summary ?? "Maternal assessment recorded" };
+      }),
+    ];
     return {
       person,
       pr: {
         ...pr,
         mother: person?.full_name ?? "Pregnant person",
         age,
-        community: "Community not recorded",
-        gravida: `G${pr.gravida ?? "-"} P${pr.parity ?? "-"}`,
-        gestation: `${gestation} weeks`,
+        community: community?.name ?? "Community not recorded",
+        gravida:
+          latestData.gravida !== undefined || latestData.parity !== undefined
+            ? `G${latestData.gravida ?? pr.gravida ?? "-"} P${latestData.parity ?? pr.parity ?? "-"}`
+            : pr.gravida !== null || pr.parity !== null
+              ? `G${pr.gravida ?? "-"} P${pr.parity ?? "-"}`
+              : historyGravidaPara
+                ? `G${historyGravidaPara[1]} P${historyGravidaPara[2]}`
+                : "G- P-",
+        gestation: `${latestData.gestation_weeks ?? registeredGestation ?? gestation} weeks`,
         edd: pr.edd_date ?? "Not recorded",
-        anc: pr.anc_visits ?? 0,
-        bp: "Not recorded",
-        weight: "Not recorded",
+        anc: Math.max(pr.anc_visits ?? 0, maternalAssessments.length),
+        bp: latestData.blood_pressure ?? registeredBloodPressure ?? "Not recorded",
+        weight: latestData.weight_kg ?? (Number.isFinite(registeredWeight) ? registeredWeight : "Not recorded"),
         risk,
+        ancHistory: anc,
+        previousPregnancies,
       },
     };
   },
@@ -56,9 +97,22 @@ export const Route = createFileRoute("/pregnancy/$id")({
 
 function PregnancyProfile() {
   const { pr } = Route.useLoaderData();
+  const router = useRouter();
   const gwk = parseInt(pr.gestation);
-  const pct = Math.round((gwk / 40) * 100);
-  const anc = (ancHistory as unknown as Record<string, AncVisit[]>)[pr.id] ?? [];
+  const pct = Math.min(100, Math.max(0, Math.round((gwk / 40) * 100)));
+  const anc = pr.ancHistory;
+
+  useEffect(() => {
+    const refreshAfterSync = () => {
+      void router.invalidate();
+    };
+    window.addEventListener("nurture-sync-status", refreshAfterSync);
+    window.addEventListener("focus", refreshAfterSync);
+    return () => {
+      window.removeEventListener("nurture-sync-status", refreshAfterSync);
+      window.removeEventListener("focus", refreshAfterSync);
+    };
+  }, [router]);
 
   return (
     <AppLayout>
@@ -113,6 +167,22 @@ function PregnancyProfile() {
         />
       </div>
 
+      <Card className="mb-4 rounded-xl">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Pregnancy history</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <div className="text-xs text-muted-foreground">Previous pregnancies</div>
+            <div className="mt-1 font-medium">{pr.previousPregnancies}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Gravida / Para</div>
+            <div className="mt-1 font-medium">{pr.gravida}</div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid lg:grid-cols-2 gap-4 mb-4">
         <Card className="rounded-xl">
           <CardHeader className="pb-3">
@@ -126,13 +196,13 @@ function PregnancyProfile() {
                 </div>
               )}
               {anc.map((a: AncVisit) => (
-                <div key={a.visit} className="p-4">
+                <div key={a.id} className="p-4">
                   <div className="flex justify-between text-sm font-medium">
-                    <span>{a.visit}</span>
-                    <span className="text-muted-foreground text-xs">{a.date}</span>
+                    <span>ANC visit · {a.gestation} weeks</span>
+                    <span className="text-muted-foreground text-xs">{new Date(a.date).toLocaleDateString()}</span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    BP {a.bp} · {a.weight} kg
+                    BP {a.bp} · {a.weight} kg · Risk {a.risk}
                   </div>
                   <div className="text-sm mt-1">{a.notes}</div>
                 </div>

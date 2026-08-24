@@ -8,6 +8,7 @@ import { conflictStore } from "./conflicts";
 import type { LocalEntity, SyncQueueOperation, SyncQueueOperationType } from "./types";
 
 export type SyncEntityType =
+  | "communities"
   | "households"
   | "persons"
   | "pregnancies"
@@ -39,6 +40,7 @@ export type SyncEvent = "idle" | "syncing" | "success" | "failed" | "waiting-net
 export type SyncListener = (snapshot: SyncStatusSnapshot) => void;
 
 const syncOrder: SyncEntityType[] = [
+  "communities",
   "households",
   "persons",
   "pregnancies",
@@ -54,6 +56,7 @@ const syncOrder: SyncEntityType[] = [
 ];
 
 const relationStores: Record<string, { table: string; field: string }[]> = {
+  households: [{ table: "communities", field: "community_id" }],
   persons: [{ table: "households", field: "household_id" }],
   pregnancies: [{ table: "persons", field: "person_id" }],
   child_profiles: [
@@ -79,6 +82,7 @@ const relationStores: Record<string, { table: string; field: string }[]> = {
 };
 
 const localTables: Record<SyncEntityType, string> = {
+  communities: "communities",
   households: "households",
   persons: "persons",
   pregnancies: "pregnancies",
@@ -121,12 +125,14 @@ async function enqueuePersistedTombstones(): Promise<void> {
 
 type LocalTable = {
   get: (id: string) => Promise<LocalEntity | undefined>;
+  where?: (index: string) => { equals: (value: string) => { first: () => Promise<LocalEntity | undefined> } };
   put: (value: LocalEntity) => Promise<unknown>;
   delete: (id: string) => Promise<unknown>;
 };
 
 type SupabaseClientLike = {
   from: (table: string) => any;
+  auth?: { getUser: () => Promise<{ data: { user: { id: string } | null } }> };
 };
 
 class DependencyPendingError extends Error {
@@ -159,8 +165,46 @@ function cleanPayload(record: LocalEntity, includeId: boolean): Record<string, u
     else if (key === "updatedAt") payload.updated_at = value;
     else payload[key] = value;
   }
+  if (record && "date_of_birth" in record && typeof payload.date_of_birth === "string") {
+    const match = payload.date_of_birth.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) payload.date_of_birth = `${match[3]}-${match[2]}-${match[1]}`;
+  }
+  if (recordType(record) === "follow_up_attempts" || recordType(record) === "follow_up_outcomes") {
+    delete payload.created_at;
+    delete payload.updated_at;
+    delete payload.created_by;
+  }
+  if (recordType(record) === "follow_up_attempts") {
+    delete payload.recorded_by;
+  }
+  if (recordType(record) === "follow_up_outcomes") {
+    delete payload.actor;
+  }
+  if (recordType(record) === "persons") {
+    const education = typeof payload.education === "string" ? payload.education.trim() : payload.education;
+    if (!education) payload.education = null;
+    else if (education === "None") payload.education = "None/Informal";
+    else if (!["None/Informal", "Primary", "JHS", "SHS", "Tertiary"].includes(String(education))) {
+      payload.education = null;
+    }
+  }
   if (includeId) payload.id = record.remoteId ?? record.localId;
   return payload;
+}
+
+function recordType(record: LocalEntity): SyncEntityType {
+  if ("follow_up_id" in record) {
+    if ("contact_status" in record) return "follow_up_outcomes";
+    return "follow_up_attempts";
+  }
+  if ("full_name" in record) return "persons";
+  if ("community_code" in record) return "communities";
+  if ("head_name" in record) return "households";
+  if ("assessment_type" in record) return "assessments";
+  if ("birth_weight_kg" in record) return "child_profiles";
+  if ("due_date" in record) return "follow_ups";
+  if ("referral_id" in record) return "referral_outcomes";
+  return "pregnancies";
 }
 
 async function resolveForeignKeys(
@@ -171,7 +215,8 @@ async function resolveForeignKeys(
   for (const relation of relationStores[entityType] ?? []) {
     const value = resolved[relation.field];
     if (typeof value !== "string") continue;
-    const parent = await (db as unknown as Record<string, LocalTable>)[relation.table].get(value);
+    const parentTable = (db as unknown as Record<string, LocalTable>)[relation.table];
+    const parent = await parentTable.get(value) ?? await parentTable.where?.("remoteId").equals(value).first();
     if (!parent) continue;
     if (!parent.remoteId) {
       throw new DependencyPendingError(
@@ -187,6 +232,22 @@ function isPermanentError(error: any): boolean {
   const code = String(error?.code ?? "");
   const status = Number(error?.status ?? error?.statusCode ?? 0);
   return status >= 400 && status < 500 && status !== 408 && status !== 409 && status !== 429;
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const value = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+    const parts = [value.message, value.details, value.hint, value.code]
+      .filter(Boolean)
+      .map(String)
+      .join(" · ");
+    if (String(value.code) === "42501") {
+      return `${parts || "Permission denied"}. Check that you are signed in and retry synchronization.`;
+    }
+    return parts || "Unknown synchronization error";
+  }
+  return String(error);
 }
 
 function backoff(attemptCount: number): string {
@@ -311,6 +372,21 @@ async function performOperation(operation: SyncQueueOperation, client: SupabaseC
     operation.entityType,
     cleanPayload(record, operation.operationType === "create"),
   );
+  const ownerTables = new Set([
+    "communities",
+    "households",
+    "persons",
+    "pregnancies",
+    "child_profiles",
+    "assessments",
+    "referrals",
+    "follow_ups",
+  ]);
+  if (operation.operationType === "create" && ownerTables.has(operation.entityType) && client.auth) {
+    const user = await client.auth.getUser();
+    if (!user.data.user) throw new Error("Cannot sync household: sign in again and retry");
+    payload.created_by = user.data.user.id;
+  }
 
   if (operation.operationType === "create") {
     const { data, error } = await table.insert(payload).select("*").single();
@@ -425,6 +501,23 @@ export class SyncManager {
     return this.activeSync;
   }
 
+  async retryFailed(): Promise<SyncStatusSnapshot> {
+    const retryable = (await syncQueueStore.list()).filter(
+      (operation) => ["failed", "pending", "retrying"].includes(operation.syncStatus),
+    );
+    await Promise.all(
+      retryable.map(async (operation) => {
+        await syncQueueStore.update(operation.id, {
+          syncStatus: "pending",
+          retryAfter: null,
+          lastError: null,
+        });
+        await updateRecordStatus(operation, { syncStatus: "pending", syncError: null });
+      }),
+    );
+    return this.syncNow();
+  }
+
   private async runSync(): Promise<SyncStatusSnapshot> {
     if (this.running && !networkMonitor.isOnline()) {
       this.setEvent("waiting-network", { online: false });
@@ -517,10 +610,18 @@ export class SyncManager {
       await syncQueueStore.delete(operation.id);
       if (operation.conflictId) await conflictStore.markHistorySync(operation.conflictId, "synced");
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessage(error);
       if (error instanceof SyncConflictError) {
         await syncQueueStore.update(operation.id, { syncStatus: "conflict", lastError: message, retryAfter: null, conflictId: `${operation.entityType}:${operation.localId}` });
         await updateRecordStatus(operation, { syncStatus: "conflict", syncError: message });
+        return;
+      }
+      if (error instanceof DependencyPendingError) {
+        await syncQueueStore.update(operation.id, {
+          syncStatus: "pending",
+          lastError: message,
+          retryAfter: backoff(attemptCount),
+        });
         return;
       }
       const permanent = isPermanentError(error) || attemptCount >= 8;
@@ -529,6 +630,8 @@ export class SyncManager {
         lastError: message,
         retryAfter: permanent ? null : backoff(attemptCount),
       });
+      this.snapshot = { ...this.snapshot, lastError: message, event: "failed" };
+      this.emit();
       const metrics = await getSyncStatusRecord();
       await updateSyncStatus({
         totalFailed: metrics.totalFailed + 1,
@@ -536,7 +639,6 @@ export class SyncManager {
       });
       if (operation.conflictId) await conflictStore.markHistorySync(operation.conflictId, "failed");
       await updateRecordStatus(operation, { syncStatus: "failed", syncError: message });
-      if (error instanceof DependencyPendingError) return;
     }
   }
 

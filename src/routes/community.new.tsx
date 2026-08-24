@@ -126,6 +126,7 @@ function NewCommunity() {
     region: regions[0] ?? "",
   }));
   const [saving, setSaving] = useState(false);
+  const [savedCommunityId, setSavedCommunityId] = useState<string | null>(null);
 
   const districtOptions = useMemo(
     () =>
@@ -212,7 +213,7 @@ function NewCommunity() {
         status: form.status || null,
       });
       toast.success(`Community ${form.name} saved`);
-      navigate({ to: "/community/$id", params: { id: record.id } });
+      setSavedCommunityId(record.id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to save community");
     } finally {
@@ -237,7 +238,22 @@ function NewCommunity() {
         }
       />
 
-      <Card className="rounded-xl">
+      {savedCommunityId ? (
+        <Card className="mx-auto max-w-lg rounded-xl">
+          <CardContent className="space-y-4 p-8 text-center">
+            <h2 className="text-xl font-semibold">Community saved</h2>
+            <p className="text-sm text-muted-foreground">{form.name} is ready for registration.</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button onClick={() => navigate({ to: "/register/household", search: { community_id: savedCommunityId } })}>
+                Create household
+              </Button>
+              <Button variant="outline" onClick={() => navigate({ to: "/community/$id", params: { id: savedCommunityId } })}>
+                View community
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : <Card className="rounded-xl">
         <CardHeader>
           <CardTitle className="text-base">
             Step {step + 1} of {stepTitles.length}: {stepTitles[step]}
@@ -557,7 +573,7 @@ function NewCommunity() {
             )}
           </div>
         </CardContent>
-      </Card>
+      </Card>}
     </AppLayout>
   );
 }

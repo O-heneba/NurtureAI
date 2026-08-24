@@ -8,6 +8,7 @@ import { db } from "./db";
 import type {
   SyncMetadata,
   LocalHousehold,
+  LocalCommunity,
   LocalPerson,
   LocalPregnancy,
   LocalChildProfile,
@@ -146,6 +147,30 @@ export const householdStore = {
 
   async count(): Promise<number> {
     return db.households.count();
+  },
+};
+
+export const communityStore = {
+  async create(data: Omit<LocalCommunity, keyof SyncMetadata>): Promise<LocalCommunity> {
+    const community: LocalCommunity = { ...data, ...createSyncMetadata() };
+    await db.communities.add(community);
+    return community;
+  },
+
+  async get(localId: string): Promise<LocalCommunity | undefined> {
+    return db.communities.get(localId);
+  },
+
+  async getByRemoteId(remoteId: string): Promise<LocalCommunity | undefined> {
+    return db.communities.where("remoteId").equals(remoteId).first();
+  },
+
+  async list(): Promise<LocalCommunity[]> {
+    return db.communities.toArray();
+  },
+
+  async listUnsyncedOrFailed(): Promise<LocalCommunity[]> {
+    return db.communities.where("syncStatus").anyOf(["pending", "failed", "conflict", "deleted"]).toArray();
   },
 };
 
@@ -773,8 +798,9 @@ export const syncQueueStore = {
  * Utility: Get all unsynced or failed records across all entity types
  */
 export async function getAllUnsyncedRecords() {
-  const [households, persons, pregnancies, childProfiles, assessments, referrals, followUps, followUpAttempts, followUpOutcomes, personNotes] =
+  const [communities, households, persons, pregnancies, childProfiles, assessments, referrals, followUps, followUpAttempts, followUpOutcomes, personNotes] =
     await Promise.all([
+      communityStore.listUnsyncedOrFailed(),
       householdStore.listUnsyncedOrFailed(),
       personStore.listUnsyncedOrFailed(),
       pregnancyStore.listUnsyncedOrFailed(),
@@ -788,6 +814,7 @@ export async function getAllUnsyncedRecords() {
     ]);
 
   return {
+    communities,
     households,
     persons,
     pregnancies,
@@ -807,6 +834,7 @@ export async function getAllUnsyncedRecords() {
 export async function getUnsyncedCount(): Promise<number> {
   const unsyncedRecords = await getAllUnsyncedRecords();
   return (
+    unsyncedRecords.communities.length +
     unsyncedRecords.households.length +
     unsyncedRecords.persons.length +
     unsyncedRecords.pregnancies.length +

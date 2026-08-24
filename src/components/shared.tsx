@@ -77,6 +77,7 @@ export function StatCard({
   icon,
   tone = "primary",
   trend,
+  onClick,
 }: {
   label: string;
   value: string | number;
@@ -84,6 +85,7 @@ export function StatCard({
   icon: ReactNode;
   tone?: "primary" | "success" | "warning" | "destructive" | "info";
   trend?: { direction: "up" | "down"; value: string };
+  onClick?: () => void;
 }) {
   const toneMap = {
     primary: "bg-primary/10 text-primary",
@@ -99,7 +101,7 @@ export function StatCard({
     destructive: "bg-destructive",
     info: "bg-info",
   } as const;
-  return (
+  const card = (
     <div className="group relative overflow-hidden rounded-xl border bg-card p-5 card-elevated hover-lift">
       <div className={cn("absolute inset-x-0 top-0 h-0.5 opacity-70", barMap[tone])} />
       <div className="flex items-start justify-between gap-3">
@@ -136,6 +138,13 @@ export function StatCard({
         </div>
       </div>
     </div>
+  );
+  return onClick ? (
+    <button type="button" onClick={onClick} className="block w-full text-left">
+      {card}
+    </button>
+  ) : (
+    card
   );
 }
 

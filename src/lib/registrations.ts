@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import { childProfileStore, householdStore, pregnancyStore, personStore } from "@/lib/storage/local-store";
+import { childProfileStore, communityStore, householdStore, pregnancyStore, personStore } from "@/lib/storage/local-store";
+import { db as localDb } from "@/lib/storage/db";
 import { createAndQueue, currentUserId, isBrowser, isOffline, localRow, updateAndQueue } from "@/lib/storage/local-first";
 
 // Types are pending regeneration; cast the client for now.
@@ -15,6 +16,36 @@ async function uid(): Promise<string> {
 }
 
 export async function listCommunities(): Promise<Array<{ id: string; name: string }>> {
+  if (isBrowser()) {
+    const local = await communityStore.list();
+    if (!isOffline()) {
+      try {
+        const { data, error } = await db.from("communities").select("*").order("name");
+        if (!error) {
+          for (const row of data ?? []) {
+            const existing = await communityStore.getByRemoteId(row.id);
+            if (existing && ["pending", "failed", "conflict", "deleted"].includes(existing.syncStatus)) continue;
+            await localDb.communities.put({
+              ...row,
+              localId: existing?.localId ?? row.id,
+              remoteId: row.id,
+              syncStatus: "synced",
+              createdAt: row.created_at,
+              updatedAt: row.updated_at,
+              lastSyncedAt: new Date().toISOString(),
+              syncError: null,
+              version: existing?.version ?? 1,
+            });
+          }
+        }
+      } catch {
+        // Keep locally persisted communities when the remote refresh is unavailable.
+      }
+    }
+    return (await communityStore.list())
+      .filter((row) => row.syncStatus !== "deleted")
+      .map((row) => ({ id: row.remoteId ?? row.localId, name: row.name }));
+  }
   const { data, error } = await db.from("communities").select("id, name").order("name");
   if (error) throw error;
   return data ?? [];
@@ -79,7 +110,17 @@ export async function listPersonsByIds(ids: string[]): Promise<any[]> {
   if (ids.length === 0) return [];
   if (isBrowser()) {
     const local = (await personStore.list()).filter((row) => ids.includes(row.localId) || (row.remoteId ? ids.includes(row.remoteId) : false));
-    if (local.length || isOffline()) return local.filter((row) => row.syncStatus !== "deleted").map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId }));
+    if (isOffline() || local.length >= ids.length) {
+      return local.filter((row) => row.syncStatus !== "deleted").map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId }));
+    }
+    const { data, error } = await db.from("persons").select("*").in("id", ids);
+    if (!error) {
+      const localRemoteIds = new Set(local.map((row) => row.remoteId ?? row.localId));
+      return [
+        ...local.filter((row) => row.syncStatus !== "deleted").map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId })),
+        ...(data ?? []).filter((row: any) => !localRemoteIds.has(row.id)),
+      ];
+    }
   }
   const { data, error } = await db.from("persons").select("*").in("id", ids);
   if (error) throw error;
@@ -195,6 +236,9 @@ export async function insertPregnancy(v: {
   gravida?: number;
   parity?: number;
   anc_visits?: number;
+  gestation_weeks?: number | null;
+  blood_pressure?: string | null;
+  weight_kg?: number | null;
   status?: string;
   notes?: string;
 }) {
@@ -245,9 +289,25 @@ export async function listPregnancies(): Promise<
   }
   const { data, error } = await db
     .from("pregnancies")
-    .select("id, person_id, lmp_date, edd_date, anc_visits, status, notes, created_at")
+    .select("id, person_id, lmp_date, edd_date, anc_visits, status, notes, created_at, gestation_weeks, blood_pressure, weight_kg")
     .order("created_at", { ascending: false })
     .limit(200);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listPregnanciesForPerson(personId: string) {
+  if (isBrowser()) {
+    const local = await pregnancyStore.listByPerson(personId);
+    if (local.length || isOffline()) {
+      return local.filter((row) => row.syncStatus !== "deleted").map(localRow);
+    }
+  }
+  const { data, error } = await db
+    .from("pregnancies")
+    .select("id, person_id, lmp_date, edd_date, gravida, parity, anc_visits, status, notes, created_at, gestation_weeks, blood_pressure, weight_kg")
+    .eq("person_id", personId)
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
@@ -258,23 +318,36 @@ export async function getPregnancy(id: string): Promise<{
   lmp_date: string | null;
   edd_date: string | null;
   anc_visits: number | null;
+  gestation_weeks: number | null;
+  blood_pressure: string | null;
+  weight_kg: number | null;
+  created_at: string;
   gravida: number | null;
   parity: number | null;
   status: string | null;
   notes: string | null;
 } | null> {
   if (isBrowser()) {
-    const local = (await pregnancyStore.get(id)) ?? (await pregnancyStore.getByRemoteId(id));
+    const local =
+      (await pregnancyStore.get(id)) ??
+      (await pregnancyStore.getByRemoteId(id)) ??
+      (await pregnancyStore.list()).find((row) => row.localId === id || row.remoteId === id);
     if (local) return localRow(local) as any;
     if (isOffline()) return null;
   }
   const { data, error } = await db
     .from("pregnancies")
-    .select("id, person_id, lmp_date, edd_date, anc_visits, gravida, parity, status, notes")
+    .select("id, person_id, lmp_date, edd_date, anc_visits, gravida, parity, status, notes, created_at, gestation_weeks, blood_pressure, weight_kg")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
-  return data ?? null;
+  if (data) return data;
+  const { data: matches, error: listError } = await db
+    .from("pregnancies")
+    .select("id, person_id, lmp_date, edd_date, anc_visits, gravida, parity, status, notes, created_at, gestation_weeks, blood_pressure, weight_kg")
+    .limit(200);
+  if (listError) throw listError;
+  return (matches ?? []).find((row: { id: string }) => row.id === id) ?? null;
 }
 
 export async function insertChild(v: {
@@ -343,9 +416,36 @@ export async function listChildProfiles(): Promise<
 > {
   if (isBrowser()) {
     const local = await childProfileStore.list();
-    if (local.length || isOffline()) {
-      return local.filter((row) => row.syncStatus !== "deleted").map(localRow) as any;
+    if (!isOffline()) {
+      try {
+        const { data, error } = await db
+          .from("child_profiles")
+          .select("id, person_id, mother_person_id, birth_weight_kg, immunizations, growth_notes, created_at")
+          .order("created_at", { ascending: false })
+          .limit(200);
+        if (!error) {
+          for (const row of data ?? []) {
+            const existing = await childProfileStore.getByRemoteId(row.id);
+            if (existing && ["pending", "failed", "conflict", "deleted"].includes(existing.syncStatus)) continue;
+            await localDb.child_profiles.put({
+              ...row,
+              localId: existing?.localId ?? row.id,
+              remoteId: row.id,
+              syncStatus: "synced",
+              createdAt: row.created_at,
+              updatedAt: row.updated_at ?? row.created_at,
+              lastSyncedAt: new Date().toISOString(),
+              syncError: null,
+              version: existing?.version ?? 1,
+            });
+          }
+        }
+      } catch {
+        // Keep locally persisted child records when the remote refresh is unavailable.
+      }
     }
+    const refreshed = await childProfileStore.list();
+    if (refreshed.length || isOffline()) return refreshed.filter((row) => row.syncStatus !== "deleted").map(localRow) as any;
   }
   const { data, error } = await db
     .from("child_profiles")
@@ -416,6 +516,11 @@ export async function getCommunity(id: string): Promise<{
   notes: string | null;
   status: string | null;
 } | null> {
+  if (isBrowser()) {
+    const local = (await communityStore.get(id)) ?? (await communityStore.getByRemoteId(id));
+    if (local) return { ...localRow(local), id: local.remoteId ?? local.localId } as any;
+    if (isOffline()) return null;
+  }
   const { data, error } = await db
     .from("communities")
     .select(
@@ -446,6 +551,13 @@ export async function insertCommunity(v: {
   notes?: string | null;
   status?: string | null;
 }) {
+  if (isBrowser()) {
+    const record = await createAndQueue("communities", communityStore, {
+      ...v,
+      created_by: await currentUserId(),
+    });
+    return { id: record.localId };
+  }
   const created_by = await uid();
   const { data, error } = await db
     .from("communities")

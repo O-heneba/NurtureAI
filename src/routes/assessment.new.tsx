@@ -443,7 +443,7 @@ function PersonStep({
               title="No matching people"
               description="Register a new person to continue."
               action={
-                <Link to="/register/person">
+                <Link to="/register/person" search={{ household_id: undefined }}>
                   <Button variant="outline">Register person</Button>
                 </Link>
               }
@@ -480,7 +480,7 @@ function PersonStep({
       </div>
 
       <div className="text-right">
-        <Link to="/register/person">
+        <Link to="/register/person" search={{ household_id: undefined }}>
           <Button variant="link" size="sm">
             + Register new person
           </Button>

@@ -131,7 +131,7 @@ function People() {
         title="People"
         description="Individuals registered under CHPS households"
         actions={
-          <Link to="/register/person">
+          <Link to="/register/person" search={{ household_id: undefined }}>
             <Button className="rounded-xl">
               <Plus className="mr-1 h-4 w-4" /> Register person
             </Button>

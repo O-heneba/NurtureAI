@@ -38,6 +38,26 @@ export interface SyncMetadata {
   version: number;
 }
 
+export interface LocalCommunity extends SyncMetadata {
+  accessibility?: string | null;
+  chps_facility_id?: string | null;
+  chps_zone?: string | null;
+  common_health_challenges?: string[] | null;
+  community_code?: string | null;
+  created_by?: string | null;
+  district?: string | null;
+  gps_lat?: number | null;
+  gps_lng?: number | null;
+  location_desc?: string | null;
+  name: string;
+  primary_languages?: string[] | null;
+  region?: string | null;
+  status?: string | null;
+  sub_district?: string | null;
+  supervisor_id?: string | null;
+  nearest_referral_facility_id?: string | null;
+}
+
 /**
  * Local household record with sync metadata
  * Mirrors: public.households
@@ -93,13 +113,16 @@ export interface LocalPerson extends SyncMetadata {
  */
 export interface LocalPregnancy extends SyncMetadata {
   anc_visits?: number | null;
+  blood_pressure?: string | null;
   created_by?: string | null;
   edd_date?: string | null;
   gravida?: number | null;
+  gestation_weeks?: number | null;
   lmp_date?: string | null;
   notes?: string | null;
   parity?: number | null;
   person_id: string;
+  weight_kg?: number | null;
   status?: string | null;
 }
 
@@ -314,6 +337,7 @@ export interface SyncConflictHistory {
  * Union type for all local entity types
  */
 export type LocalEntity =
+  | LocalCommunity
   | LocalHousehold
   | LocalPerson
   | LocalPregnancy

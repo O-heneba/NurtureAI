@@ -8,8 +8,10 @@ export async function listReadyQueue(batchSize = DEFAULT_BATCH_SIZE): Promise<Sy
   const operations = await syncQueueStore.listByPriority();
   return operations
     .filter((operation) =>
-      ["pending", "syncing", "retrying", "failed"].includes(operation.syncStatus) &&
-      (!operation.retryAfter || Date.parse(operation.retryAfter) <= now),
+      ["pending", "syncing", "retrying"].includes(operation.syncStatus) ||
+      (operation.syncStatus === "failed" &&
+        !!operation.retryAfter &&
+        Date.parse(operation.retryAfter) <= now),
     )
     .sort((left, right) => {
       const entityOrder = left.priority === right.priority ? 0 : right.priority - left.priority;

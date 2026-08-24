@@ -1,4 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { formatDisplayDate, parseDisplayDate } from "@/lib/date-format";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,13 @@ import { toast } from "sonner";
 import { insertChild, insertPerson, listHouseholds, listPersons } from "@/lib/registrations";
 
 export const Route = createFileRoute("/register/child")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    person_id: typeof s.person_id === "string" ? s.person_id : undefined,
+    person_name: typeof s.person_name === "string" ? s.person_name : undefined,
+    person_sex: typeof s.person_sex === "string" ? s.person_sex : undefined,
+    person_dob: typeof s.person_dob === "string" ? s.person_dob : undefined,
+    household_id: typeof s.household_id === "string" ? s.household_id : undefined,
+  }),
   component: RegisterChild,
 });
 
@@ -35,9 +43,23 @@ const immSchedule = [
 
 function RegisterChild() {
   const nav = useNavigate();
+  const { person_id, person_name, person_sex, person_dob, household_id } = useSearch({
+    from: "/register/child",
+  });
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [v, setV] = useState<Record<string, string>>({ nutrition: "Normal", bf: "Exclusive" });
+  const [v, setV] = useState<Record<string, string>>({
+    nutrition: "Normal",
+    bf: "Exclusive",
+    existingPersonId: person_id ?? "",
+    name: person_name ?? "",
+    sex: person_sex ?? "",
+    dob: person_dob ?? "",
+    household: household_id ?? "",
+  });
+  const [guardianName, setGuardianName] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [guardianRole, setGuardianRole] = useState("mother");
   const [ms, setMs] = useState<string[]>([]);
   const [imm, setImm] = useState<string[]>([]);
   const [households, setHouseholds] = useState<
@@ -70,15 +92,29 @@ function RegisterChild() {
       toast.error("Select a household");
       return;
     }
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(v.dob)) {
+      toast.error("Use date of birth format DD/MM/YYYY");
+      return;
+    }
     setSaving(true);
     try {
-      const person = await insertPerson({
-        household_id: v.household,
-        full_name: v.name,
-        sex: v.sex || undefined,
-        date_of_birth: v.dob,
-        notes: v.notes || undefined,
-      });
+      const person = v.existingPersonId
+        ? { id: v.existingPersonId }
+        : await insertPerson({
+            household_id: v.household,
+            full_name: v.name,
+            sex: v.sex || undefined,
+            date_of_birth: parseDisplayDate(v.dob),
+            notes: v.notes || undefined,
+          });
+      const guardian = guardianName.trim()
+        ? await insertPerson({
+            household_id: v.household,
+            full_name: guardianName.trim(),
+            sex: guardianRole === "mother" ? "F" : guardianRole === "father" ? "M" : undefined,
+            phone: guardianPhone.trim() || undefined,
+          })
+        : null;
       const growthNotes = [
         v.cw && `Current weight: ${v.cw}kg`,
         v.h && `Height: ${v.h}cm`,
@@ -92,7 +128,7 @@ function RegisterChild() {
         .join(" | ");
       await insertChild({
         person_id: person.id,
-        mother_person_id: v.mother || undefined,
+        mother_person_id: v.mother || guardian?.id || undefined,
         birth_weight_kg: v.bw ? Number(v.bw) : undefined,
         immunizations: imm,
         growth_notes: growthNotes,
@@ -149,6 +185,15 @@ function RegisterChild() {
       <Card className="rounded-xl max-w-3xl">
         <CardContent className="p-6 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
+            {v.existingPersonId && (
+              <div className="sm:col-span-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+                <div className="font-semibold text-primary">Continuing with person</div>
+                <div className="mt-1 font-medium">{v.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {v.sex || "Sex not recorded"} · DOB {v.dob || "Not recorded"}
+                </div>
+              </div>
+            )}
             <Field label="Child name" required className="sm:col-span-2">
               <Input
                 value={v.name ?? ""}
@@ -171,7 +216,7 @@ function RegisterChild() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Mother (optional)">
+            <Field label="Mother or father/guardian (optional)">
               <Select value={v.mother} onValueChange={(x) => s("mother", x)}>
                 <SelectTrigger>
                   <SelectValue placeholder={mothers.length ? "Select mother" : "Loading…"} />
@@ -185,8 +230,53 @@ function RegisterChild() {
                 </SelectContent>
               </Select>
             </Field>
+            <Field label="Add mother/father/guardian if not found">
+              <Input
+                value={guardianName}
+                onChange={(e) => setGuardianName(e.target.value)}
+                placeholder="Full name"
+              />
+            </Field>
+            <Field label="Guardian phone number">
+              <Input
+                value={guardianPhone}
+                onChange={(e) => setGuardianPhone(e.target.value)}
+                placeholder="Phone number"
+              />
+            </Field>
+            <Field label="Relationship">
+              <Select value={guardianRole} onValueChange={setGuardianRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mother">Mother</SelectItem>
+                  <SelectItem value="father">Father</SelectItem>
+                  <SelectItem value="guardian">Guardian</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Birth date" required>
-              <Input type="date" value={v.dob ?? ""} onChange={(e) => s("dob", e.target.value)} />
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="DD/MM/YYYY"
+                  inputMode="numeric"
+                  value={v.dob ?? ""}
+                  onChange={(e) => s("dob", e.target.value)}
+                />
+                <Input
+                  type="date"
+                  aria-label="Pick birth date from calendar"
+                  className="w-12 shrink-0 px-2"
+                  value={
+                    parseDisplayDate(v.dob ?? "").match(/^\d{4}-\d{2}-\d{2}$/)
+                      ? parseDisplayDate(v.dob ?? "")
+                      : ""
+                  }
+                  onChange={(e) => s("dob", formatDisplayDate(e.target.value))}
+                />
+              </div>
             </Field>
             <Field label="Sex">
               <Select value={v.sex} onValueChange={(x) => s("sex", x)}>

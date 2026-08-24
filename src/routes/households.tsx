@@ -127,7 +127,7 @@ function Households() {
         title="Households"
         description={`${accessibleHouseholds.length} households registered`}
         actions={
-          <Link to="/register/household">
+          <Link to="/register/household" search={{ community_id: undefined }}>
             <Button className="rounded-xl">
               <Plus className="mr-1 h-4 w-4" /> Register
             </Button>

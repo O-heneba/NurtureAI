@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,9 @@ import { listCommunities } from "@/lib/registrations";
 import { createWorkflowHousehold, listWorkflowHouseholds } from "@/lib/household-person.service";
 
 export const Route = createFileRoute("/register/household")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    community_id: typeof s.community_id === "string" ? s.community_id : undefined,
+  }),
   component: RegisterHousehold,
 });
 
@@ -36,7 +39,7 @@ const stepTitles = [
 
 const schema = z.object({
   community_id: z.string().uuid("Select a community"),
-  house_no: z.string().trim().min(1, "House number required").max(20),
+  house_no: z.string().trim().max(20),
   head_name: z.string().trim().min(2, "Head of household required").max(60),
   phone: z
     .string()
@@ -90,9 +93,14 @@ const initialState: HouseholdFormState = {
 
 function RegisterHousehold() {
   const navigate = useNavigate();
-  const [values, setValues] = useState<HouseholdFormState>(initialState);
+  const { community_id } = useSearch({ from: "/register/household" });
+  const [values, setValues] = useState<HouseholdFormState>(() => ({
+    ...initialState,
+    community_id: community_id ?? "",
+  }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
+  const [savedHouseholdId, setSavedHouseholdId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(0);
   const [communities, setCommunities] = useState<Array<{ id: string; name: string }>>([]);
@@ -181,6 +189,7 @@ function RegisterHousehold() {
         draft: r.data.draft,
       });
       setDone(true);
+      setSavedHouseholdId(saved.id);
       toast.success(saved.workflowStatus === "pending" ? "Household saved locally · pending sync" : "Household registered");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
@@ -207,6 +216,9 @@ function RegisterHousehold() {
               <Link to="/households">
                 <Button variant="outline">View households</Button>
               </Link>
+              <Button onClick={() => navigate({ to: "/register/person", search: { household_id: savedHouseholdId ?? undefined } })}>
+                Add person
+              </Button>
               <Button
                 onClick={() => {
                   setDone(false);
@@ -274,7 +286,7 @@ function RegisterHousehold() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="House number" required error={errors.house_no}>
+              <Field label="House number" error={errors.house_no}>
                 <Input
                   value={values.house_no}
                   onChange={(e) => set("house_no", e.target.value)}

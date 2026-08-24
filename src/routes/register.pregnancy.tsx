@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,12 @@ import { toast } from "sonner";
 import { insertPregnancy, listPersons } from "@/lib/registrations";
 
 export const Route = createFileRoute("/register/pregnancy")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    person_id: typeof s.person_id === "string" ? s.person_id : undefined,
+    person_name: typeof s.person_name === "string" ? s.person_name : undefined,
+    person_sex: typeof s.person_sex === "string" ? s.person_sex : undefined,
+    person_dob: typeof s.person_dob === "string" ? s.person_dob : undefined,
+  }),
   component: RegisterPregnancy,
 });
 
@@ -42,9 +48,12 @@ const dangerSigns = [
 
 function RegisterPregnancy() {
   const nav = useNavigate();
+  const { person_id, person_name, person_sex, person_dob } = useSearch({
+    from: "/register/pregnancy",
+  });
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [personId, setPersonId] = useState("");
+  const [personId, setPersonId] = useState(person_id ?? "");
   const [status, setStatus] = useState("confirmed");
   const [ga, setGA] = useState("28");
   const [edd, setEDD] = useState("");
@@ -59,6 +68,8 @@ function RegisterPregnancy() {
   const [persons, setPersons] = useState<
     Array<{ id: string; full_name: string; sex: string | null }>
   >([]);
+
+  const selectedPerson = persons.find((person) => person.id === personId);
 
   useEffect(() => {
     listPersons()
@@ -97,6 +108,9 @@ function RegisterPregnancy() {
         person_id: personId,
         edd_date: edd,
         anc_visits: Number(anc) || 0,
+        gestation_weeks: Number(ga) || null,
+        blood_pressure: bp || null,
+        weight_kg: weight ? Number(weight) : null,
         status,
         notes: combinedNotes,
       });
@@ -142,6 +156,16 @@ function RegisterPregnancy() {
       />
       <Card className="rounded-xl max-w-3xl">
         <CardContent className="p-6 space-y-4">
+          {personId && (selectedPerson || person_name) && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+              <div className="font-semibold text-primary">Continuing with person</div>
+              <div className="mt-1 font-medium">{selectedPerson?.full_name ?? person_name}</div>
+              <div className="text-xs text-muted-foreground">
+                {selectedPerson?.sex ?? person_sex ?? "Sex not recorded"} · DOB{" "}
+                {person_dob ?? "Not recorded"}
+              </div>
+            </div>
+          )}
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Pregnant person" required className="sm:col-span-2">
               <Select value={personId} onValueChange={setPersonId}>

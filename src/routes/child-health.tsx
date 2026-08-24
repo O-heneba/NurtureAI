@@ -135,7 +135,16 @@ function ChildHealth() {
         title="Child Health"
         description="Growth monitoring & immunization tracking for children under 5"
         actions={
-          <Link to="/register/child">
+          <Link
+            to="/register/child"
+            search={{
+              person_id: undefined,
+              person_name: undefined,
+              person_sex: undefined,
+              person_dob: undefined,
+              household_id: undefined,
+            }}
+          >
             <Button className="rounded-xl">
               <Plus className="mr-1 h-4 w-4" /> Register child
             </Button>
@@ -241,7 +250,16 @@ function ChildHealth() {
               title="No registered children"
               description="Register a child to start monitoring growth and immunizations."
               action={
-                <Link to="/register/child">
+                <Link
+                  to="/register/child"
+                  search={{
+                    person_id: undefined,
+                    person_name: undefined,
+                    person_sex: undefined,
+                    person_dob: undefined,
+                    household_id: undefined,
+                  }}
+                >
                   <Button>Register child</Button>
                 </Link>
               }

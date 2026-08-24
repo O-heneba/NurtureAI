@@ -6,10 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { CalendarCheck, AlertTriangle, Send, UserPlus, ClipboardCheck, Apple, Wifi, Home as HomeIcon } from "lucide-react";
+import { CalendarCheck, AlertTriangle, Send, UserPlus, ClipboardCheck, Apple, Wifi, Home as HomeIcon, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSyncStatus } from "@/hooks/use-sync-status";
 import { cn } from "@/lib/utils";
+import { syncQueueStore } from "@/lib/storage/local-store";
+import type { SyncQueueOperation } from "@/lib/storage/types";
+import { syncManager } from "@/lib/storage/sync-manager";
+import { useEffect, useState } from "react";
+import { listAssessments } from "@/lib/assessments";
+import { listReferrals } from "@/lib/referrals";
+import { listFollowUps } from "@/lib/followups";
+import { listWorkflowHouseholds, listWorkflowPersons } from "@/lib/household-person.service";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -41,10 +49,62 @@ const quickActions = [
 function Dashboard() {
   const { profile } = useAuth();
   const sync = useSyncStatus();
+  const [showPending, setShowPending] = useState(false);
+  const [operations, setOperations] = useState<SyncQueueOperation[]>([]);
+  const [recentActivities, setRecentActivities] = useState<Array<{ id: string; text: string; time: string; tone: string }>>([]);
+  const [upcomingVisits, setUpcomingVisits] = useState<Array<{ id: string; patient: string; type: string; when: string }>>([]);
   const userName = profile?.full_name?.split(" ")[0] || "User";
   const facility = profile?.facility || "CHPS Facility";
-  const recentActivities = [] as Array<{ id: string; text: string; time: string; tone: string }>;
-  const upcomingVisits = [] as Array<{ id: string; patient: string; type: string; when: string }>;
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      listAssessments(20),
+      listReferrals(),
+      listFollowUps({ scope: "all" }),
+      listWorkflowPersons(),
+      listWorkflowHouseholds(),
+    ])
+      .then(([assessments, referrals, followUps, persons, households]) => {
+        if (!active) return;
+        const personNames = new Map(persons.map((person) => [person.id, person.full_name]));
+        const householdNames = new Map(households.map((household) => [household.id, household.head_name]));
+        const activities = [
+          ...assessments.map((item) => ({ id: `assessment-${item.id}`, text: `Assessment recorded for ${item.inputs?.person?.full_name ?? "person"}`, time: item.created_at, tone: "info" })),
+          ...referrals.map((item) => ({ id: `referral-${item.id}`, text: `Referral ${item.status.replace(/_/g, " ")} for ${personNames.get(item.person_id ?? "") ?? "person"}`, time: item.created_at, tone: item.urgency === "emergency" ? "destructive" : "warning" })),
+          ...followUps.map((item) => ({ id: `followup-${item.id}`, text: `Follow-up ${item.status.replace(/_/g, " ")} for ${personNames.get(item.person_id ?? "") ?? householdNames.get(item.household_id ?? "") ?? "client"}`, time: item.created_at, tone: "success" })),
+          ...persons.map((item) => ({ id: `person-${item.id}`, text: `${item.full_name} registered`, time: item.createdAt, tone: "info" })),
+        ].sort((left, right) => right.time.localeCompare(left.time));
+        setRecentActivities(activities.slice(0, 6));
+        setUpcomingVisits(
+          followUps
+            .filter((item) => item.due_date >= new Date().toISOString().slice(0, 10) && ["scheduled", "due", "in_progress"].includes(item.status))
+            .slice(0, 4)
+            .map((item) => ({ id: item.id, patient: personNames.get(item.person_id ?? "") ?? householdNames.get(item.household_id ?? "") ?? "Client", type: item.type.replace(/_/g, " "), when: item.due_date })),
+        );
+      })
+      .catch(() => {
+        if (active) {
+          setRecentActivities([]);
+          setUpcomingVisits([]);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showPending) return;
+    const load = () => {
+      void syncQueueStore.list().then((rows) =>
+        setOperations(rows.filter((row) => ["pending", "syncing", "retrying", "failed"].includes(row.syncStatus))),
+      );
+    };
+    load();
+    window.addEventListener("nurture-sync-status", load);
+    return () => window.removeEventListener("nurture-sync-status", load);
+  }, [showPending, sync.pending, sync.failed]);
 
   return (
     <AppLayout>
@@ -83,8 +143,39 @@ function Dashboard() {
           hint={sync.failed ? `${sync.failed} sync failed` : "Local changes awaiting sync"}
           icon={<Send className="h-5 w-5" />}
           tone="warning"
+          onClick={() => setShowPending((current) => !current)}
         />
       </div>
+
+      {showPending && (
+        <Card className="mb-6 rounded-xl">
+          <CardHeader className="flex-row items-center justify-between gap-3 pb-3">
+            <div>
+              <CardTitle className="text-base">Pending sync changes</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Saved on this device and waiting to reach Supabase.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => void syncManager.retryFailed()} disabled={!sync.online || sync.syncing || operations.length === 0}>
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry sync
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {operations.length === 0 ? <p className="text-sm text-muted-foreground">No pending changes.</p> : (
+              <div className="divide-y rounded-lg border">
+                {operations.map((operation) => (
+                  <div key={operation.id} className="grid gap-2 p-3 text-sm sm:grid-cols-[1fr_auto]">
+                    <div className="min-w-0">
+                      <div className="font-medium">{operation.operationType === "create" ? "New" : operation.operationType === "update" ? "Updated" : "Deleted"} {operation.entityType.replace(/_/g, " ")}</div>
+                      <div className="truncate text-xs text-muted-foreground">{String(operation.payload.full_name ?? operation.payload.name ?? operation.localId)}</div>
+                      {operation.lastError && <div className="text-xs text-destructive">{operation.lastError}</div>}
+                    </div>
+                    <div className={cn("text-xs capitalize", operation.syncStatus === "failed" ? "text-destructive" : "text-muted-foreground")}>{operation.syncStatus}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick actions */}
       <Card className="rounded-xl mb-6">
@@ -116,9 +207,7 @@ function Dashboard() {
         <Card className="rounded-xl lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between pb-3">
             <CardTitle className="text-base">Recent Activities</CardTitle>
-            <Button variant="ghost" size="sm">
-              View all
-            </Button>
+            <Link to="/assessments" className="text-sm text-primary hover:underline">View all</Link>
           </CardHeader>
           <CardContent className="space-y-1">
             {recentActivities.length > 0 ? (
@@ -171,7 +260,7 @@ function Dashboard() {
               ))
             ) : (
               <p className="text-sm text-muted-foreground py-8 text-center">
-                No upcoming visits. Schedule visits via Supabase.
+                No upcoming visits scheduled.
               </p>
             )}
           </CardContent>
