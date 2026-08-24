@@ -149,7 +149,7 @@ function RegisterChild() {
       <Card className="rounded-xl max-w-3xl">
         <CardContent className="p-6 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Child name" className="sm:col-span-2">
+            <Field label="Child name" required className="sm:col-span-2">
               <Input
                 value={v.name ?? ""}
                 onChange={(e) => s("name", e.target.value)}
@@ -157,7 +157,7 @@ function RegisterChild() {
                 maxLength={60}
               />
             </Field>
-            <Field label="Household">
+            <Field label="Household" required>
               <Select value={v.household} onValueChange={(x) => s("household", x)}>
                 <SelectTrigger>
                   <SelectValue placeholder={households.length ? "Select household" : "Loading…"} />
@@ -185,7 +185,7 @@ function RegisterChild() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Birth date">
+            <Field label="Birth date" required>
               <Input type="date" value={v.dob ?? ""} onChange={(e) => s("dob", e.target.value)} />
             </Field>
             <Field label="Sex">
@@ -325,16 +325,18 @@ function RegisterChild() {
 
 function Field({
   label,
+  required,
   className,
   children,
 }: {
   label: string;
+  required?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className={"grid gap-1.5 " + (className ?? "")}>
-      <Label>{label}</Label>
+      <Label required={required}>{label}</Label>
       {children}
     </div>
   );

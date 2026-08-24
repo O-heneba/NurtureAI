@@ -3,7 +3,7 @@
  * All local records include sync metadata for future synchronization
  */
 
-export type SyncStatus = "pending" | "synced" | "failed" | "conflict" | "deleted";
+export type SyncStatus = "pending" | "syncing" | "retrying" | "synced" | "failed" | "conflict" | "deleted";
 
 /**
  * Base sync metadata attached to all locally stored records
@@ -254,6 +254,60 @@ export interface SyncQueueOperation {
   retryAfter?: string | null;
   /** Priority for sync ordering (higher = sync first) */
   priority: number;
+  conflictId?: string | null;
+}
+
+export interface LocalReferralStatusHistory extends SyncMetadata {
+  referral_id: string;
+  from_status: string | null;
+  to_status: string;
+  note: string | null;
+  actor: string | null;
+  at: string;
+}
+
+export interface LocalReferralOutcome extends SyncMetadata {
+  referral_id: string;
+  seen: boolean | null;
+  attended_at: string | null;
+  facility_attended: string | null;
+  service_received: string | null;
+  outcome: string | null;
+  further_action_required: boolean;
+  barrier: string | null;
+  notes: string | null;
+  recorded_by: string | null;
+}
+
+export type ConflictStatus = "pending" | "resolved-local" | "resolved-remote" | "resolved-merged";
+
+export interface SyncConflict {
+  id: string;
+  entityType: string;
+  localId: string;
+  remoteId: string;
+  localVersion: number;
+  remoteVersion: string;
+  detectedAt: string;
+  localData: Record<string, unknown>;
+  remoteData: Record<string, unknown>;
+  status: ConflictStatus;
+  operationType: SyncQueueOperationType;
+}
+
+export interface SyncConflictHistory {
+  id: string;
+  entityType: string;
+  localId: string;
+  remoteId: string;
+  operationType: SyncQueueOperationType;
+  conflictCreatedAt: string;
+  localSnapshot: Record<string, unknown>;
+  remoteSnapshot: Record<string, unknown>;
+  resolution: "resolved-local" | "resolved-remote" | "resolved-merged";
+  mergedSnapshot: Record<string, unknown> | null;
+  resolvedAt: string;
+  synchronizationStatus: "pending" | "synced" | "failed";
 }
 
 /**
@@ -269,4 +323,6 @@ export type LocalEntity =
   | LocalFollowUp
   | LocalFollowUpAttempt
   | LocalFollowUpOutcome
-  | LocalPersonNotes;
+  | LocalPersonNotes
+  | LocalReferralStatusHistory
+  | LocalReferralOutcome;

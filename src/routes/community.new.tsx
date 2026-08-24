@@ -178,6 +178,17 @@ function NewCommunity() {
   };
 
   const handleSubmit = async () => {
+    const missingFields = [
+      !form.name.trim() && "Community name",
+      !form.region && "Region",
+      !form.district && "District",
+    ].filter(Boolean) as string[];
+    if (missingFields.length > 0) {
+      toast.error(`Required: ${missingFields.join(", ")}`);
+      setStep(!form.name.trim() ? 0 : 1);
+      return;
+    }
+
     setSaving(true);
     try {
       const record = await insertCommunity({
@@ -187,9 +198,9 @@ function NewCommunity() {
         district: form.district || null,
         sub_district: form.subDistrict || null,
         chps_zone: form.chpsZone || null,
-        chps_facility_id: form.chpsFacility || null,
-        supervisor_id: form.supervisor || null,
-        nearest_referral_facility_id: form.nearestFacility || null,
+        chps_facility_id: null,
+        supervisor_id: null,
+        nearest_referral_facility_id: null,
         gps_lat: form.gpsLat ? Number(form.gpsLat) : null,
         gps_lng: form.gpsLng ? Number(form.gpsLng) : null,
         location_desc: form.locationDesc || null,
@@ -198,7 +209,6 @@ function NewCommunity() {
           ? form.commonHealthChallenges
           : [],
         accessibility: form.accessibility || null,
-        notes: form.notes || null,
         status: form.status || null,
       });
       toast.success(`Community ${form.name} saved`);
@@ -237,7 +247,7 @@ function NewCommunity() {
           {step === 0 && (
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <Label>Community name</Label>
+                <Label required>Community name</Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
@@ -285,7 +295,7 @@ function NewCommunity() {
           {step === 1 && (
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <Label>Region</Label>
+                <Label required>Region</Label>
                 <Select
                   value={form.region}
                   onValueChange={(value) => setForm((prev) => ({ ...prev, region: value }))}
@@ -303,7 +313,7 @@ function NewCommunity() {
                 </Select>
               </div>
               <div>
-                <Label>District</Label>
+                <Label required>District</Label>
                 <Select
                   value={form.district}
                   onValueChange={(value) =>

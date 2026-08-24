@@ -148,7 +148,7 @@ function NewReferral() {
         <CardContent className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <Label>Person</Label>
+              <Label required>Person</Label>
               <Select
                 value={form.person_id}
                 onValueChange={(v) => setForm((f) => ({ ...f, person_id: v }))}
@@ -189,7 +189,7 @@ function NewReferral() {
               )}
             </div>
             <div>
-              <Label>Category</Label>
+              <Label required>Category</Label>
               <Input
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
@@ -197,7 +197,7 @@ function NewReferral() {
               />
             </div>
             <div>
-              <Label>Urgency</Label>
+              <Label required>Urgency</Label>
               <Select
                 value={form.urgency}
                 onValueChange={(v) => setForm((f) => ({ ...f, urgency: v as Urgency }))}
@@ -217,7 +217,7 @@ function NewReferral() {
           </div>
 
           <div>
-            <Label>Reason for referral</Label>
+            <Label required>Reason for referral</Label>
             <Textarea
               rows={2}
               value={form.reason}

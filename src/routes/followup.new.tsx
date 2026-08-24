@@ -202,7 +202,7 @@ function NewFollowUp() {
               </Select>
             </div>
             <div>
-              <Label>Type</Label>
+              <Label required>Type</Label>
               <Select
                 value={form.type}
                 onValueChange={(v) => setForm((f) => ({ ...f, type: v as FollowUpType }))}
@@ -238,7 +238,7 @@ function NewFollowUp() {
               </Select>
             </div>
             <div>
-              <Label>Due date</Label>
+              <Label required>Due date</Label>
               <Input
                 type="date"
                 value={form.due_date}
@@ -246,7 +246,7 @@ function NewFollowUp() {
               />
             </div>
             <div className="sm:col-span-2">
-              <Label>Contact method</Label>
+              <Label required>Contact method</Label>
               <Select
                 value={form.contact_method}
                 onValueChange={(v) =>

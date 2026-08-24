@@ -45,7 +45,7 @@ export function OfflineStatus({ compact = false }: { compact?: boolean }) {
     >
       {online ? sync.event === "syncing" ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
       <span>
-        {!online ? (sync.event === "waiting-network" ? "Waiting for Internet" : compact ? "Offline · Local AI available" : "Offline") : sync.event === "syncing" ? `Syncing${sync.progress.total ? ` (${sync.progress.completed}/${sync.progress.total})` : ""}` : sync.conflicts > 0 ? "Conflict" : sync.failed > 0 ? "Failed Sync" : sync.pending > 0 ? `Pending Sync (${sync.pending})` : "Synced"}
+        {!online ? (sync.event === "waiting-network" ? "Waiting for Internet" : compact ? "Offline · Local AI available" : "Offline") : sync.event === "syncing" ? `Syncing${sync.progress.total ? ` (${sync.progress.completed}/${sync.progress.total})` : ""}` : sync.conflicts > 0 ? "Conflict requires review" : sync.failed > 0 ? "Failed Sync" : sync.pending > 0 ? `Pending Sync (${sync.pending})` : "Synced"}
       </span>
     </div>
   );

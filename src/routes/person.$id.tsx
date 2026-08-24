@@ -19,7 +19,7 @@ export const Route = createFileRoute("/person/$id")({
   component: PersonDetail,
   notFoundComponent: () => (
     <AppLayout>
-      <EmptyState title="Person not found" action={<Link to="/people">Back to people</Link>} />
+      <EmptyState title="Person not found" action={<Link to="/people" search={{ q: "" }}>Back to people</Link>} />
     </AppLayout>
   ),
 });

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AI_MODEL, useAI } from "@/ai";
+import { AI_MODEL, useAI, type AIProviderKind } from "@/ai";
 import {
   getSelectedRuntime,
   isLocalRuntimeSupported,
@@ -21,6 +21,7 @@ function AIDevelopmentCheck() {
   const [response, setResponse] = useState("");
   const [generationMs, setGenerationMs] = useState<number | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [provider, setProvider] = useState<AIProviderKind | null>(null);
   const [checkingCache, setCheckingCache] = useState(true);
   const [runtime, setRuntime] = useState<"webgpu" | "wasm" | "unsupported">("unsupported");
   const [webGPU, setWebGPU] = useState(false);
@@ -52,6 +53,7 @@ function AIDevelopmentCheck() {
     try {
       const result = await ai.generate({ prompt, maxTokens: 120, temperature: 0.2 });
       setResponse(result.text);
+      setProvider(result.provider);
       setGenerationMs(Math.round(performance.now() - started));
       await refreshCache();
     } catch (error) {
@@ -72,6 +74,9 @@ function AIDevelopmentCheck() {
     ["WebGPU available", webGPU ? "Yes" : "No"],
     ["WASM available", wasm ? "Yes" : "No"],
     ["Online", ai.isOnline ? "Yes" : "No"],
+    ["Network", ai.isOnline ? "Online" : "Offline"],
+    ["Provider", provider === "local" ? "Local AI" : "Not generated"],
+    ["Cloud fallback", "Disabled on this screen"],
     ["Model cached", checkingCache ? "Checking..." : cached ? "Yes" : "No"],
     ["Model loading", ai.isLoading ? "Yes" : "No"],
     ["Loading progress", `${ai.progress}%`],
@@ -118,7 +123,11 @@ function AIDevelopmentCheck() {
             disabled={ai.isLoading || !prompt.trim() || !wasm}
             onClick={() => void generate()}
           >
-            {ai.isLoading ? `Loading model (${ai.progress}%)` : "Generate"}
+            {ai.isLoading
+              ? `Loading model (${ai.progress}%)`
+              : cached || ai.isReady
+                ? "Generate with Local AI"
+                : "Prepare Offline AI and Generate"}
           </button>
           {ai.error && <p className="text-sm text-destructive">{ai.error.message}</p>}
           {generationError && <p className="text-sm text-destructive">{generationError}</p>}

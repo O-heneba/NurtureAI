@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { referralOutcomeStore, referralStatusHistoryStore, referralStore } from "@/lib/storage/local-store";
+import { createAndQueue, currentUserId, isBrowser, isOffline, localRow, updateAndQueue } from "@/lib/storage/local-first";
 
 const db = supabase as unknown as {
   from: (t: string) => any;
@@ -70,6 +72,11 @@ export interface ReferralOutcome {
   notes: string | null;
 }
 
+async function localReferralId(id: string): Promise<string> {
+  const local = (await referralStore.get(id)) ?? (await referralStore.getByRemoteId(id));
+  return local?.localId ?? id;
+}
+
 export async function listFacilities(): Promise<FacilityRow[]> {
   const { data, error } = await db.from("facilities").select("*").order("name");
   if (error) throw error;
@@ -81,6 +88,14 @@ export async function listReferrals(filter?: {
   urgency?: Urgency | "all";
   person_id?: string;
 }): Promise<ReferralRow[]> {
+  if (isBrowser()) {
+    let local = await referralStore.list();
+    local = local.filter((row) => row.syncStatus !== "deleted");
+    if (filter?.person_id) local = local.filter((row) => row.person_id === filter.person_id);
+    if (filter?.status && filter.status !== "all") local = local.filter((row) => row.status === filter.status);
+    if (filter?.urgency && filter.urgency !== "all") local = local.filter((row) => row.urgency === filter.urgency);
+    if (local.length || isOffline()) return local.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 200).map((row) => localRow(row) as ReferralRow);
+  }
   let q = db.from("referrals").select("*").order("created_at", { ascending: false }).limit(200);
   if (filter?.status && filter.status !== "all") q = q.eq("status", filter.status);
   if (filter?.urgency && filter.urgency !== "all") q = q.eq("urgency", filter.urgency);
@@ -91,12 +106,21 @@ export async function listReferrals(filter?: {
 }
 
 export async function getReferral(id: string): Promise<ReferralRow | null> {
+  if (isBrowser()) {
+    const local = (await referralStore.get(id)) ?? (await referralStore.getByRemoteId(id));
+    if (local) return localRow(local) as ReferralRow;
+    if (isOffline()) return null;
+  }
   const { data, error } = await db.from("referrals").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data ?? null;
 }
 
 export async function listReferralHistory(referral_id: string) {
+  if (isBrowser()) {
+    const local = await referralStatusHistoryStore.listByReferral(await localReferralId(referral_id));
+    if (local.length || isOffline()) return local.map((row) => ({ id: row.remoteId ?? row.localId, from_status: row.from_status, to_status: row.to_status, note: row.note, at: row.at, actor: row.actor }));
+  }
   const { data, error } = await db
     .from("referral_status_history")
     .select("*")
@@ -114,6 +138,11 @@ export async function listReferralHistory(referral_id: string) {
 }
 
 export async function getReferralOutcome(referral_id: string): Promise<ReferralOutcome | null> {
+  if (isBrowser()) {
+    const local = await referralOutcomeStore.getByReferral(await localReferralId(referral_id));
+    if (local) return { ...local, id: local.remoteId ?? local.localId } as ReferralOutcome;
+    if (isOffline()) return null;
+  }
   const { data, error } = await db
     .from("referral_outcomes")
     .select("*")
@@ -137,6 +166,28 @@ export async function createReferral(v: {
   follow_up_required?: boolean;
   submit?: boolean;
 }): Promise<ReferralRow> {
+  if (isBrowser()) {
+    const actor = await currentUserId();
+    const status: ReferralStatus = v.submit ? "submitted" : "draft";
+    const record = await createAndQueue("referrals", referralStore, {
+      person_id: v.person_id,
+      assessment_id: v.assessment_id ?? null,
+      facility_id: v.facility_id ?? null,
+      facility: v.facility ?? null,
+      category: v.category ?? null,
+      reason: v.reason,
+      symptoms: v.symptoms ?? null,
+      findings: v.findings ?? null,
+      requested_service: v.requested_service ?? null,
+      urgency: v.urgency,
+      status,
+      follow_up_required: v.follow_up_required ?? true,
+      submitted_at: v.submit ? new Date().toISOString() : null,
+      created_by: actor,
+    });
+    await createAndQueue("referral_status_history", referralStatusHistoryStore, { referral_id: record.localId, from_status: null, to_status: status, note: v.submit ? "Referral submitted" : "Referral drafted", actor, at: new Date().toISOString() });
+    return localRow(record) as ReferralRow;
+  }
   const actor = await uid();
   const now = new Date().toISOString();
   const status: ReferralStatus = v.submit ? "submitted" : "draft";
@@ -173,6 +224,20 @@ export async function updateReferralStatus(
   to: ReferralStatus,
   note?: string,
 ): Promise<ReferralRow> {
+  if (isBrowser()) {
+    const cur = await getReferral(id);
+    if (!cur) throw new Error("Not found");
+    const local = (await referralStore.get(id)) ?? (await referralStore.getByRemoteId(id));
+    if (!local) throw new Error("Local record not found");
+    const patch: Record<string, unknown> = { status: to };
+    const now = new Date().toISOString();
+    if (to === "submitted" && !cur.submitted_at) patch.submitted_at = now;
+    if (to === "acknowledged" && !cur.acknowledged_at) patch.acknowledged_at = now;
+    if (to === "completed" && !cur.completed_at) patch.completed_at = now;
+    const updated = await updateAndQueue("referrals", referralStore, local.localId, patch);
+    await createAndQueue("referral_status_history", referralStatusHistoryStore, { referral_id: local.localId, from_status: cur.status, to_status: to, note: note ?? null, actor: await currentUserId(), at: now });
+    return localRow(updated) as ReferralRow;
+  }
   const actor = await uid();
   const cur = await getReferral(id);
   if (!cur) throw new Error("Not found");
@@ -209,6 +274,14 @@ export async function recordReferralOutcome(v: {
   barrier?: string;
   notes?: string;
 }): Promise<ReferralOutcome> {
+  if (isBrowser()) {
+    const localReferral = await localReferralId(v.referral_id);
+    const existing = await referralOutcomeStore.getByReferral(localReferral);
+    const payload = { ...v, referral_id: localReferral, attended_at: v.attended_at ?? null, facility_attended: v.facility_attended ?? null, service_received: v.service_received ?? null, outcome: v.outcome ?? null, further_action_required: v.further_action_required ?? false, barrier: v.barrier ?? null, notes: v.notes ?? null, recorded_by: await currentUserId() };
+    const local = existing ? await updateAndQueue("referral_outcomes", referralOutcomeStore, existing.localId, payload) : await createAndQueue("referral_outcomes", referralOutcomeStore, { ...payload, referral_id: localReferral });
+    if (!local) throw new Error("Referral outcome not found");
+    return { ...localRow(local), id: local.localId } as ReferralOutcome;
+  }
   const actor = await uid();
   const existing = await getReferralOutcome(v.referral_id);
   const payload = {

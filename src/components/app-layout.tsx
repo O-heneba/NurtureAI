@@ -39,6 +39,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { OfflineStatus } from "@/components/offline-status";
 import { syncManager } from "@/lib/storage/sync-manager";
+import { ConflictReviewPanel } from "@/components/conflict-review";
 
 const nav = [
   {
@@ -262,7 +263,10 @@ function SidebarInner({
   initials: string;
   roles?: string[];
 }) {
-  const visibleNav = nav.filter((item) => !item.roles || item.roles.some((r) => roles.includes(r)));
+  const visibleRoles = roles.length > 0 ? roles : ["chps_worker"];
+  const visibleNav = nav.filter(
+    (item) => !item.roles || item.roles.some((r) => visibleRoles.includes(r)),
+  );
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
@@ -336,6 +340,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const current = nav.find(
     (n) =>
       (n.to && n.to === pathname) ||
@@ -418,10 +423,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </p>
             </div>
 
-            <div className="relative ml-auto hidden sm:block max-w-xs w-full">
+            <form
+              className="relative ml-auto hidden sm:block max-w-xs w-full"
+              onSubmit={(event) => {
+                event.preventDefault();
+                navigate({ to: "/people", search: { q: search } });
+              }}
+            >
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search people, households…" className="pl-9 bg-background" />
-            </div>
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Find a person or household…"
+                aria-label="Find a person or household"
+                className="pl-9 bg-background"
+              />
+            </form>
 
             <div className="hidden sm:block">
               <OfflineStatus compact />
@@ -505,6 +522,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           key={pathname}
           className="pb-24 lg:pb-10 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto w-full animate-page-in"
         >
+          <ConflictReviewPanel />
           {children}
         </main>
       </div>

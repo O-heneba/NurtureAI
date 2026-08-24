@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { assessmentStore, personStore } from "@/lib/storage/local-store";
+import { createAndQueue, currentUserId, isBrowser, isOffline, localRow, updateAndQueue } from "@/lib/storage/local-first";
 import type { AssessmentType, Priority } from "./assessment-engine";
 
 const db = supabase as unknown as {
@@ -39,6 +41,14 @@ export async function saveDraft(v: {
   assessment_type: AssessmentType;
   inputs: any;
 }): Promise<AssessmentRow> {
+  if (isBrowser()) {
+    const payload = { person_id: v.person_id, assessment_type: v.assessment_type, inputs: { ...v.inputs, status: "draft" }, created_by: await currentUserId(), ai_result: null, risk_level: null, risk_score: null, summary: null };
+    if (v.id) {
+      const local = (await assessmentStore.get(v.id)) ?? (await assessmentStore.getByRemoteId(v.id));
+      if (local) return localRow(await updateAndQueue("assessments", assessmentStore, local.localId, payload)) as AssessmentRow;
+    }
+    return localRow(await createAndQueue("assessments", assessmentStore, payload)) as AssessmentRow;
+  }
   const created_by = await uid();
   const payload = {
     person_id: v.person_id,
@@ -69,6 +79,16 @@ export async function submitAssessment(v: {
   ai_result: any;
   priority: Priority;
 }): Promise<AssessmentRow> {
+  if (isBrowser()) {
+    const risk_level = PRIORITY_TO_RISK[v.priority];
+    const risk_score = v.priority === "urgent" ? 90 : v.priority === "priority_review" ? 70 : v.priority === "monitor" ? 40 : 15;
+    const payload = { person_id: v.person_id, assessment_type: v.assessment_type, inputs: { ...v.inputs, status: "submitted", priority: v.priority }, ai_result: v.ai_result, risk_level, risk_score, summary: v.ai_result?.summary ?? null, created_by: await currentUserId() };
+    if (v.id) {
+      const local = (await assessmentStore.get(v.id)) ?? (await assessmentStore.getByRemoteId(v.id));
+      if (local) return localRow(await updateAndQueue("assessments", assessmentStore, local.localId, payload)) as AssessmentRow;
+    }
+    return localRow(await createAndQueue("assessments", assessmentStore, payload)) as AssessmentRow;
+  }
   const created_by = await uid();
   const risk_level = PRIORITY_TO_RISK[v.priority];
   const risk_score =
@@ -105,6 +125,10 @@ export async function submitAssessment(v: {
 }
 
 export async function listAssessments(limit = 100): Promise<AssessmentRow[]> {
+  if (isBrowser()) {
+    const local = await assessmentStore.list();
+    if (local.length || isOffline()) return local.filter((row) => row.syncStatus !== "deleted").slice(0, limit).map((row) => localRow(row) as AssessmentRow);
+  }
   const { data, error } = await db
     .from("assessments")
     .select("*")
@@ -115,6 +139,10 @@ export async function listAssessments(limit = 100): Promise<AssessmentRow[]> {
 }
 
 export async function listAssessmentsForPerson(person_id: string): Promise<AssessmentRow[]> {
+  if (isBrowser()) {
+    const local = await assessmentStore.listByPerson(person_id);
+    if (local.length || isOffline()) return local.filter((row) => row.syncStatus !== "deleted").map((row) => localRow(row) as AssessmentRow);
+  }
   const { data, error } = await db
     .from("assessments")
     .select("*")
@@ -125,6 +153,11 @@ export async function listAssessmentsForPerson(person_id: string): Promise<Asses
 }
 
 export async function getAssessment(id: string): Promise<AssessmentRow | null> {
+  if (isBrowser()) {
+    const local = (await assessmentStore.get(id)) ?? (await assessmentStore.getByRemoteId(id));
+    if (local) return localRow(local) as AssessmentRow;
+    if (isOffline()) return null;
+  }
   const { data, error } = await db.from("assessments").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return (data as AssessmentRow) ?? null;
@@ -144,6 +177,11 @@ export async function markReviewed(id: string, note?: string): Promise<Assessmen
       { at: new Date().toISOString(), note },
     ];
   }
+  if (isBrowser()) {
+    const local = (await assessmentStore.get(id)) ?? (await assessmentStore.getByRemoteId(id));
+    if (!local) throw new Error("Local record not found");
+    return localRow(await updateAndQueue("assessments", assessmentStore, local.localId, { inputs })) as AssessmentRow;
+  }
   const { data, error } = await db
     .from("assessments")
     .update({ inputs })
@@ -161,6 +199,11 @@ export async function appendNote(id: string, note: string): Promise<AssessmentRo
     ...(current.inputs ?? {}),
     notes_log: [...(current.inputs?.notes_log ?? []), { at: new Date().toISOString(), note }],
   };
+  if (isBrowser()) {
+    const local = (await assessmentStore.get(id)) ?? (await assessmentStore.getByRemoteId(id));
+    if (!local) throw new Error("Local record not found");
+    return localRow(await updateAndQueue("assessments", assessmentStore, local.localId, { inputs })) as AssessmentRow;
+  }
   const { data, error } = await db
     .from("assessments")
     .update({ inputs })
@@ -180,6 +223,12 @@ export async function searchPersons(q: string): Promise<
     household_id: string | null;
   }>
 > {
+  if (isBrowser()) {
+    const local = (await personStore.list()).filter((person) => person.syncStatus !== "deleted");
+    if (local.length || isOffline()) {
+      return local.filter((person) => person.full_name.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 20).map((person) => ({ id: person.remoteId ?? person.localId, full_name: person.full_name, sex: person.sex ?? null, date_of_birth: person.date_of_birth ?? null, household_id: person.household_id ?? null }));
+    }
+  }
   let query = db
     .from("persons")
     .select("id, full_name, sex, date_of_birth, household_id")

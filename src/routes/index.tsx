@@ -6,22 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import {
-  CalendarCheck,
-  AlertTriangle,
-  Send,
-  RefreshCw,
-  HeartPulse,
-  Baby,
-  MapPin,
-  UserPlus,
-  ClipboardCheck,
-  Apple,
-  Wifi,
-  Activity,
-  Home as HomeIcon,
-} from "lucide-react";
+import { CalendarCheck, AlertTriangle, Send, UserPlus, ClipboardCheck, Apple, Wifi, Home as HomeIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useSyncStatus } from "@/hooks/use-sync-status";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -53,6 +40,7 @@ const quickActions = [
 
 function Dashboard() {
   const { profile } = useAuth();
+  const sync = useSyncStatus();
   const userName = profile?.full_name?.split(" ")[0] || "User";
   const facility = profile?.facility || "CHPS Facility";
   const recentActivities = [] as Array<{ id: string; text: string; time: string; tone: string }>;
@@ -69,12 +57,13 @@ function Dashboard() {
               {userName} 👋
             </h2>
             <p className="mt-2 text-sm opacity-90 max-w-xl">
-              Dashboard metrics loading from Supabase at{" "}
-              <span className="font-semibold">{facility}</span>.
+              Work saved on this device remains available at{" "}
+              <span className="font-semibold">{facility}</span>, even without internet.
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs">
-            <Wifi className="h-3.5 w-3.5" /> Synced · just now
+            <Wifi className="h-3.5 w-3.5" />
+            {sync.online ? (sync.syncing ? "Syncing" : sync.pending ? `${sync.pending} pending` : "Synced") : "Offline · saved locally"}
           </div>
         </div>
       </div>
@@ -82,60 +71,18 @@ function Dashboard() {
       {/* Stat grid - populated from server functions, not hardcoded */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard
-          label="Today's Visits"
-          value="—"
-          hint="From Supabase"
-          icon={<CalendarCheck className="h-5 w-5" />}
-          tone="primary"
-        />
-        <StatCard
-          label="High Risk Cases"
-          value="—"
-          hint="From Supabase"
+          label="Conflicts to Review"
+          value={sync.conflicts.toString()}
+          hint={sync.conflicts ? "Review conflicts" : "No conflicts waiting"}
           icon={<AlertTriangle className="h-5 w-5" />}
           tone="destructive"
         />
         <StatCard
-          label="Pending Referrals"
-          value="—"
-          hint="From Supabase"
+          label="Pending Sync Changes"
+          value={sync.pending.toString()}
+          hint={sync.failed ? `${sync.failed} sync failed` : "Local changes awaiting sync"}
           icon={<Send className="h-5 w-5" />}
           tone="warning"
-        />
-        <StatCard
-          label="Follow Ups"
-          value="—"
-          hint="From Supabase"
-          icon={<RefreshCw className="h-5 w-5" />}
-          tone="info"
-        />
-        <StatCard
-          label="Pregnant Women"
-          value="—"
-          hint="From Supabase"
-          icon={<HeartPulse className="h-5 w-5" />}
-          tone="destructive"
-        />
-        <StatCard
-          label="Children Under 5"
-          value="—"
-          hint="From Supabase"
-          icon={<Baby className="h-5 w-5" />}
-          tone="success"
-        />
-        <StatCard
-          label="Communities"
-          value="—"
-          hint="From Supabase"
-          icon={<MapPin className="h-5 w-5" />}
-          tone="info"
-        />
-        <StatCard
-          label="Coverage"
-          value="—"
-          hint="From Supabase"
-          icon={<Activity className="h-5 w-5" />}
-          tone="primary"
         />
       </div>
 

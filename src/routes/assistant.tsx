@@ -69,6 +69,11 @@ function Assistant() {
         description="Ask NurtureAI for nutrition and health guidance"
       />
 
+      <div className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm">
+        <strong>AI-assisted guidance:</strong> Review suggestions against the person's situation and
+        local clinical guidance. A qualified health worker remains responsible for decisions.
+      </div>
+
       <div className="grid lg:grid-cols-[280px_1fr] gap-4">
         <div className="space-y-4">
           <Card className="rounded-xl">

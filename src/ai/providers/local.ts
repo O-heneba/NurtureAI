@@ -15,11 +15,13 @@ export class LocalAIProvider implements AIProvider {
   readonly modelId = AI_MODEL.id;
   private controller: AbortController | null = null;
 
+  constructor(private readonly modelLoader: typeof loadModel = loadModel) {}
+
   async initialize(onProgress?: (progress: number) => void): Promise<void> {
     if (!isLocalRuntimeSupported()) {
       throw new AIError("unsupported", "Local AI requires a browser with WebAssembly support.");
     }
-    await loadModel(onProgress);
+    await this.modelLoader(onProgress);
   }
 
   async isAvailable(): Promise<boolean> {
@@ -29,12 +31,12 @@ export class LocalAIProvider implements AIProvider {
   async generate(request: AIRequest): Promise<AIResponse> {
     const signal = request.signal;
     if (signal?.aborted) throw new AIError("cancelled", "AI generation was cancelled.");
-    const model = await loadModel();
     this.controller = new AbortController();
     const abort = () => this.controller?.abort();
     signal?.addEventListener("abort", abort, { once: true });
 
     try {
+      const model = await this.modelLoader();
       const result = await model(formatPrompt(request), {
         max_new_tokens: request.maxTokens ?? 160,
         temperature: request.temperature ?? 0.2,

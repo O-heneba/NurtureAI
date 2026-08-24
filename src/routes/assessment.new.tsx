@@ -52,6 +52,7 @@ import {
   searchPersons,
   listAssessmentsForPerson,
 } from "@/lib/assessments";
+import { AI_UNAVAILABLE_RESULT } from "@/lib/ai-safety";
 
 export const Route = createFileRoute("/assessment/new")({
   component: NewAssessment,
@@ -196,14 +197,13 @@ function NewAssessment() {
     }
 
     setSubmitting(true);
+    let ai: Record<string, unknown> = AI_UNAVAILABLE_RESULT;
     try {
-      const ai = await analyze({
+      ai = await analyze({
         data: {
           assessment_type: type,
           person: {
-            full_name: person.full_name,
             sex: person.sex,
-            dob: person.date_of_birth,
             age_display: calcAge(person.date_of_birth),
           },
           danger_signs: dangerSigns,
@@ -212,7 +212,11 @@ function NewAssessment() {
           previous: previous ?? undefined,
         },
       });
+    } catch {
+      toast.info("AI assistance is currently unavailable. The assessment and rules-based priority are still available.");
+    }
 
+    try {
       const row = await submitAssessment({
         id: draftId ?? undefined,
         person_id: person.id,
@@ -575,7 +579,8 @@ function ConsentStep({
         <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} />
         <span className="text-sm">
           I confirm that <strong>{person?.full_name ?? "the client"}</strong> (or their guardian)
-          has been informed and consents to this assessment.
+          has been informed and consents to this assessment.{" "}
+          <span className="text-destructive">*</span>
         </span>
       </label>
     </div>
@@ -658,18 +663,20 @@ function DangerStep({
 
 function Field({
   label,
+  required,
   hint,
   error,
   children,
 }: {
   label: string;
+  required?: boolean;
   hint?: string;
   error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="grid gap-1.5">
-      <Label>{label}</Label>
+      <Label required={required}>{label}</Label>
       {children}
       {hint && !error && <div className="text-[11px] text-muted-foreground">{hint}</div>}
       {error && <div className="text-[11px] text-destructive">{error}</div>}
@@ -753,7 +760,7 @@ function FormStep({
 
             {type === "maternal" && sec.key === "pregnancy" && (
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Gestational age (weeks)" error={err("gestation_weeks")}>
+                <Field label="Gestational age (weeks)" required error={err("gestation_weeks")}>
                   <Input
                     type="number"
                     value={data.gestation_weeks ?? ""}
@@ -796,7 +803,7 @@ function FormStep({
                     placeholder="120/80"
                   />
                 </Field>
-                <Field label="Temperature (°C)" error={err("temperature_c")}>
+                <Field label="Temperature (°C)" required error={err("temperature_c")}>
                   <Input
                     type="number"
                     step="0.1"
@@ -877,14 +884,14 @@ function FormStep({
 
             {type === "newborn" && sec.key === "birth" && (
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Age (days)" error={err("age_days")}>
+                <Field label="Age (days)" required error={err("age_days")}>
                   <Input
                     type="number"
                     value={data.age_days ?? ""}
                     onChange={(e) => upd("age_days", e.target.value)}
                   />
                 </Field>
-                <Field label="Birth weight (kg)" error={err("birth_weight_kg")}>
+                <Field label="Birth weight (kg)" required error={err("birth_weight_kg")}>
                   <Input
                     type="number"
                     step="0.1"
@@ -988,14 +995,14 @@ function FormStep({
 
             {type === "child_u5" && sec.key === "anthro" && (
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Age (months)" error={err("age_months")}>
+                <Field label="Age (months)" required error={err("age_months")}>
                   <Input
                     type="number"
                     value={data.age_months ?? ""}
                     onChange={(e) => upd("age_months", e.target.value)}
                   />
                 </Field>
-                <Field label="Weight (kg)" error={err("weight_kg")}>
+                <Field label="Weight (kg)" required error={err("weight_kg")}>
                   <Input
                     type="number"
                     step="0.1"

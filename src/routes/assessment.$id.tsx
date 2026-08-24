@@ -109,6 +109,7 @@ function AssessmentDetail() {
   const priority = (row.inputs?.priority ?? "routine") as Priority;
   const pMeta = PRIORITY_META[priority];
   const ai = row.ai_result ?? {};
+  const aiProvider = ai.provider === "local" ? "Local AI" : ai.provider === "cloud" ? "Cloud AI" : null;
   const status = row.inputs?.status ?? "submitted";
   const dangerKeys: string[] = row.inputs?.danger_signs ?? [];
   const dangerCatalog = DANGER_SIGNS[type] ?? [];
@@ -116,6 +117,9 @@ function AssessmentDetail() {
   const rulesFlags: Array<{ code: string; message: string; severity: string }> =
     row.inputs?.rules?.flags ?? [];
   const missing: string[] = row.inputs?.rules?.missing ?? [];
+  const missingInformation = Array.from(
+    new Set([...missing, ...(Array.isArray(ai.missing_information) ? ai.missing_information : [])]),
+  );
   const notesLog: Array<{ at: string; note: string }> = row.inputs?.notes_log ?? [];
 
   return (
@@ -193,10 +197,10 @@ function AssessmentDetail() {
         </div>
       </div>
 
-      {(ai.uncertainty_notice || ai.priority_level) && (
+      {(ai.unavailable || ai.uncertainty_notice || ai.priority_level) && (
         <div className="mb-4">
           <AIRecommendationCard
-            title="AI-assisted decision support"
+            title={`AI-assisted decision support${aiProvider ? ` · ${aiProvider}` : ""}`}
             tone={
               pMeta.tone === "destructive"
                 ? "destructive"
@@ -205,7 +209,11 @@ function AssessmentDetail() {
                   : "primary"
             }
           >
-            {ai.summary && <p>{ai.summary}</p>}
+            {ai.unavailable ? (
+              <p>{ai.message}</p>
+            ) : (
+              ai.summary && <p>{ai.summary}</p>
+            )}
             {ai.uncertainty_notice && (
               <p className="text-xs text-muted-foreground border-t pt-2 mt-2">
                 <strong>Limitations:</strong> {ai.uncertainty_notice}
@@ -290,13 +298,13 @@ function AssessmentDetail() {
                 </ul>
               </>
             )}
-            {missing.length > 0 && (
+            {missingInformation.length > 0 && (
               <>
                 <div className="mt-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Missing info
                 </div>
                 <ul className="text-sm mt-2 space-y-1 text-muted-foreground">
-                  {missing.map((m) => (
+                  {missingInformation.map((m) => (
                     <li key={m}>• {m}</li>
                   ))}
                 </ul>

@@ -201,7 +201,7 @@ function RegisterPerson() {
               {values.full_name} has been added to the {household?.head_name ?? ""} household.
             </p>
             <div className="mt-6 flex justify-center gap-2">
-              <Link to="/people">
+              <Link to="/people" search={{ q: "" }}>
                 <Button variant="outline">View people</Button>
               </Link>
               <Button
@@ -253,7 +253,7 @@ function RegisterPerson() {
 
           {step === 0 && (
             <div className="grid gap-4">
-              <Field label="Select household" error={errors.household_id}>
+              <Field label="Select household" required error={errors.household_id}>
                 <Select value={values.household_id} onValueChange={(v) => set("household_id", v)}>
                   <SelectTrigger>
                     <SelectValue
@@ -274,7 +274,7 @@ function RegisterPerson() {
 
           {step === 1 && (
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Full name" error={errors.full_name}>
+              <Field label="Full name" required error={errors.full_name}>
                 <Input
                   value={values.full_name}
                   onChange={(e) => set("full_name", e.target.value)}
@@ -282,7 +282,7 @@ function RegisterPerson() {
                   maxLength={60}
                 />
               </Field>
-              <Field label="Gender" error={errors.sex}>
+              <Field label="Gender" required error={errors.sex}>
                 <Select value={values.sex} onValueChange={(v) => set("sex", v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
@@ -293,7 +293,7 @@ function RegisterPerson() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Date of birth" error={errors.date_of_birth}>
+              <Field label="Date of birth" required error={errors.date_of_birth}>
                 <Input
                   type="date"
                   value={values.date_of_birth}
@@ -489,18 +489,20 @@ function RegisterPerson() {
 
 function Field({
   label,
+  required,
   error,
   className,
   children,
 }: {
   label: string;
+  required?: boolean;
   error?: string;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className={"grid gap-1.5 " + (className ?? "")}>
-      <Label>{label}</Label>
+      <Label required={required}>{label}</Label>
       {children}
       {error && <span className="text-xs text-destructive">{error}</span>}
     </div>

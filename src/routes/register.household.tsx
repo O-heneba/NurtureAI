@@ -258,7 +258,7 @@ function RegisterHousehold() {
 
           {step === 0 && (
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Community" error={errors.community_id}>
+              <Field label="Community" required error={errors.community_id}>
                 <Select value={values.community_id} onValueChange={(v) => set("community_id", v)}>
                   <SelectTrigger>
                     <SelectValue
@@ -274,7 +274,7 @@ function RegisterHousehold() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="House number" error={errors.house_no}>
+              <Field label="House number" required error={errors.house_no}>
                 <Input
                   value={values.house_no}
                   onChange={(e) => set("house_no", e.target.value)}
@@ -282,7 +282,7 @@ function RegisterHousehold() {
                   maxLength={20}
                 />
               </Field>
-              <Field label="Head of household" error={errors.head_name}>
+              <Field label="Head of household" required error={errors.head_name}>
                 <Input
                   value={values.head_name}
                   onChange={(e) => set("head_name", e.target.value)}
@@ -290,7 +290,7 @@ function RegisterHousehold() {
                   maxLength={60}
                 />
               </Field>
-              <Field label="Phone" error={errors.phone}>
+              <Field label="Phone" required error={errors.phone}>
                 <Input
                   value={values.phone}
                   onChange={(e) => set("phone", e.target.value)}
@@ -317,7 +317,7 @@ function RegisterHousehold() {
 
           {step === 1 && (
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Address" error={errors.address} className="sm:col-span-2">
+              <Field label="Address" required error={errors.address} className="sm:col-span-2">
                 <Input
                   value={values.address}
                   onChange={(e) => set("address", e.target.value)}
@@ -480,18 +480,20 @@ function RegisterHousehold() {
 
 function Field({
   label,
+  required,
   error,
   className,
   children,
 }: {
   label: string;
+  required?: boolean;
   error?: string;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className={"grid gap-1.5 " + (className ?? "")}>
-      <Label>{label}</Label>
+      <Label required={required}>{label}</Label>
       {children}
       {error && <span className="text-xs text-destructive">{error}</span>}
     </div>

@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { childProfileStore, householdStore, pregnancyStore, personStore } from "@/lib/storage/local-store";
+import { createAndQueue, currentUserId, isBrowser, isOffline, localRow, updateAndQueue } from "@/lib/storage/local-first";
 
 // Types are pending regeneration; cast the client for now.
 const db = supabase as unknown as {
@@ -28,6 +30,10 @@ export async function listHouseholds(): Promise<
     phone: string | null;
   }>
 > {
+  if (isBrowser()) {
+    const local = await householdStore.list();
+    if (local.length || isOffline()) return local.filter((row) => row.syncStatus !== "deleted").map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId })) as any;
+  }
   const { data, error } = await db
     .from("households")
     .select("id, head_name, house_no, community_id, address, phone")
@@ -49,6 +55,10 @@ export async function listPersons(): Promise<
     notes: string | null;
   }>
 > {
+  if (isBrowser()) {
+    const local = await personStore.list();
+    if (local.length || isOffline()) return local.filter((row) => row.syncStatus !== "deleted").map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId })) as any;
+  }
   const { data, error } = await db
     .from("persons")
     .select(
@@ -67,6 +77,10 @@ export async function listPersonsFull(): Promise<any[]> {
 
 export async function listPersonsByIds(ids: string[]): Promise<any[]> {
   if (ids.length === 0) return [];
+  if (isBrowser()) {
+    const local = (await personStore.list()).filter((row) => ids.includes(row.localId) || (row.remoteId ? ids.includes(row.remoteId) : false));
+    if (local.length || isOffline()) return local.filter((row) => row.syncStatus !== "deleted").map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId }));
+  }
   const { data, error } = await db.from("persons").select("*").in("id", ids);
   if (error) throw error;
   return data ?? [];
@@ -115,6 +129,10 @@ export async function insertPerson(v: {
   profile_types?: string[];
   priority_status?: string;
 }) {
+  if (isBrowser()) {
+    const record = await createAndQueue("persons", personStore, { ...v, created_by: await currentUserId() });
+    return { id: record.localId };
+  }
   const created_by = await uid();
   const { data, error } = await db
     .from("persons")
@@ -140,6 +158,11 @@ export async function getPerson(id: string): Promise<{
   profile_types?: string[] | null;
   priority_status?: string | null;
 } | null> {
+  if (isBrowser()) {
+    const local = (await personStore.get(id)) ?? (await personStore.getByRemoteId(id));
+    if (local) return { ...localRow(local), id: local.remoteId ?? local.localId } as any;
+    if (isOffline()) return null;
+  }
   const { data, error } = await db.from("persons").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data ?? null;
@@ -175,6 +198,10 @@ export async function insertPregnancy(v: {
   status?: string;
   notes?: string;
 }) {
+  if (isBrowser()) {
+    const record = await createAndQueue("pregnancies", pregnancyStore, { ...v, created_by: await currentUserId() });
+    return { id: record.localId };
+  }
   const created_by = await uid();
   const { data, error } = await db
     .from("pregnancies")
@@ -183,6 +210,19 @@ export async function insertPregnancy(v: {
     .single();
   if (error) throw error;
   return data as { id: string };
+}
+
+export async function updatePregnancy(localId: string, updates: Partial<{
+  lmp_date: string | null;
+  edd_date: string | null;
+  gravida: number | null;
+  parity: number | null;
+  anc_visits: number | null;
+  status: string | null;
+  notes: string | null;
+}>): Promise<any> {
+  if (!isBrowser()) throw new Error("Pregnancy updates require a browser");
+  return localRow(await updateAndQueue("pregnancies", pregnancyStore, localId, updates as Record<string, unknown>));
 }
 
 export async function listPregnancies(): Promise<
@@ -197,6 +237,12 @@ export async function listPregnancies(): Promise<
     created_at: string;
   }>
 > {
+  if (isBrowser()) {
+    const local = await pregnancyStore.list();
+    if (local.length || isOffline()) {
+      return local.filter((row) => row.syncStatus !== "deleted").map(localRow) as any;
+    }
+  }
   const { data, error } = await db
     .from("pregnancies")
     .select("id, person_id, lmp_date, edd_date, anc_visits, status, notes, created_at")
@@ -217,6 +263,11 @@ export async function getPregnancy(id: string): Promise<{
   status: string | null;
   notes: string | null;
 } | null> {
+  if (isBrowser()) {
+    const local = (await pregnancyStore.get(id)) ?? (await pregnancyStore.getByRemoteId(id));
+    if (local) return localRow(local) as any;
+    if (isOffline()) return null;
+  }
   const { data, error } = await db
     .from("pregnancies")
     .select("id, person_id, lmp_date, edd_date, anc_visits, gravida, parity, status, notes")
@@ -233,6 +284,10 @@ export async function insertChild(v: {
   immunizations?: unknown;
   growth_notes?: string;
 }) {
+  if (isBrowser()) {
+    const record = await createAndQueue("child_profiles", childProfileStore, { ...v, created_by: await currentUserId() });
+    return { id: record.localId };
+  }
   const created_by = await uid();
   const { data, error } = await db
     .from("child_profiles")
@@ -243,6 +298,16 @@ export async function insertChild(v: {
   return data as { id: string };
 }
 
+export async function updateChildProfile(localId: string, updates: Partial<{
+  birth_weight_kg: number | null;
+  immunizations: unknown;
+  growth_notes: string | null;
+  mother_person_id: string | null;
+}>): Promise<any> {
+  if (!isBrowser()) throw new Error("Child profile updates require a browser");
+  return localRow(await updateAndQueue("child_profiles", childProfileStore, localId, updates as Record<string, unknown>));
+}
+
 export async function getChildProfile(id: string): Promise<{
   id: string;
   person_id: string;
@@ -251,6 +316,11 @@ export async function getChildProfile(id: string): Promise<{
   immunizations: string[] | null;
   growth_notes: string | null;
 } | null> {
+  if (isBrowser()) {
+    const local = (await childProfileStore.get(id)) ?? (await childProfileStore.getByRemoteId(id));
+    if (local) return localRow(local) as any;
+    if (isOffline()) return null;
+  }
   const { data, error } = await db
     .from("child_profiles")
     .select("id, person_id, mother_person_id, birth_weight_kg, immunizations, growth_notes")
@@ -271,6 +341,12 @@ export async function listChildProfiles(): Promise<
     created_at: string;
   }>
 > {
+  if (isBrowser()) {
+    const local = await childProfileStore.list();
+    if (local.length || isOffline()) {
+      return local.filter((row) => row.syncStatus !== "deleted").map(localRow) as any;
+    }
+  }
   const { data, error } = await db
     .from("child_profiles")
     .select(
@@ -343,7 +419,7 @@ export async function getCommunity(id: string): Promise<{
   const { data, error } = await db
     .from("communities")
     .select(
-      "id, name, community_code, region, district, sub_district, chps_zone, chps_facility_id, supervisor_id, nearest_referral_facility_id, gps_lat, gps_lng, location_desc, primary_languages, common_health_challenges, accessibility, notes, status",
+      "id, name, community_code, region, district, sub_district, chps_zone, chps_facility_id, supervisor_id, nearest_referral_facility_id, gps_lat, gps_lng, location_desc, primary_languages, common_health_challenges, accessibility, status",
     )
     .eq("id", id)
     .maybeSingle();
@@ -373,7 +449,25 @@ export async function insertCommunity(v: {
   const created_by = await uid();
   const { data, error } = await db
     .from("communities")
-    .insert({ ...v, created_by })
+    .insert({
+      name: v.name,
+      community_code: v.community_code,
+      region: v.region,
+      district: v.district,
+      sub_district: v.sub_district,
+      chps_zone: v.chps_zone,
+      chps_facility_id: v.chps_facility_id,
+      supervisor_id: v.supervisor_id,
+      nearest_referral_facility_id: v.nearest_referral_facility_id,
+      gps_lat: v.gps_lat,
+      gps_lng: v.gps_lng,
+      location_desc: v.location_desc,
+      primary_languages: v.primary_languages,
+      common_health_challenges: v.common_health_challenges,
+      accessibility: v.accessibility,
+      status: v.status,
+      created_by,
+    })
     .select("id")
     .single();
   if (error) throw error;

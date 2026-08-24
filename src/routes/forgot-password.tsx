@@ -50,7 +50,7 @@ function ForgotPassword() {
         ) : (
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div className="space-y-1.5">
-              <Label>Email</Label>
+              <Label required>Email</Label>
               <Input
                 type="email"
                 value={email}

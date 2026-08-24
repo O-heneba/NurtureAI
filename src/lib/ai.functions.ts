@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { preserveRulesPriority } from "./ai-safety";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
@@ -182,9 +183,9 @@ export const analyzeAssessment = createServerFn({ method: "POST" })
     });
     const raw = resp.choices?.[0]?.message?.content ?? "{}";
     try {
-      return JSON.parse(raw);
+      return preserveRulesPriority(JSON.parse(raw), data.rules.priority as any);
     } catch {
       const cleaned = raw.replace(/```json|```/g, "").trim();
-      return JSON.parse(cleaned);
+      return preserveRulesPriority(JSON.parse(cleaned), data.rules.priority as any);
     }
   });

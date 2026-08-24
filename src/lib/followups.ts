@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { followUpAttemptStore, followUpOutcomeStore, followUpStore } from "@/lib/storage/local-store";
+import { createAndQueue, currentUserId, isBrowser, isOffline, localRow, updateAndQueue } from "@/lib/storage/local-first";
 
 const db = supabase as unknown as {
   from: (t: string) => any;
@@ -84,6 +86,15 @@ export async function listFollowUps(filter?: {
   scope?: "all" | "mine" | "due" | "missed" | "upcoming" | "completed";
   person_id?: string;
 }): Promise<FollowUpRow[]> {
+  if (isBrowser()) {
+    let local = (await followUpStore.list()).filter((row) => row.syncStatus !== "deleted");
+    if (filter?.person_id) local = local.filter((row) => row.person_id === filter.person_id);
+    if (filter?.scope === "due") local = local.filter((row) => row.due_date <= todayIso() && ["scheduled", "due", "in_progress"].includes(row.status ?? ""));
+    if (filter?.scope === "missed") local = local.filter((row) => row.status === "missed");
+    if (filter?.scope === "upcoming") local = local.filter((row) => row.due_date > todayIso() && ["scheduled", "draft"].includes(row.status ?? ""));
+    if (filter?.scope === "completed") local = local.filter((row) => row.status === "completed");
+    if (local.length || isOffline()) return local.sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 200).map((row) => localRow(row) as FollowUpRow);
+  }
   let q = db.from("follow_ups").select("*").order("due_date", { ascending: true }).limit(200);
   if (filter?.person_id) q = q.eq("person_id", filter.person_id);
   if (filter?.scope === "mine") {
@@ -104,12 +115,23 @@ export async function listFollowUps(filter?: {
 }
 
 export async function getFollowUp(id: string): Promise<FollowUpRow | null> {
+  if (isBrowser()) {
+    const local = await followUpStore.get(id);
+    if (local) return localRow(local) as FollowUpRow;
+    const byRemote = (await followUpStore.list()).find((row) => row.remoteId === id);
+    if (byRemote) return localRow(byRemote) as FollowUpRow;
+    if (isOffline()) return null;
+  }
   const { data, error } = await db.from("follow_ups").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data ?? null;
 }
 
 export async function listAttempts(follow_up_id: string): Promise<FollowUpAttempt[]> {
+  if (isBrowser()) {
+    const local = await followUpAttemptStore.listByFollowUp(follow_up_id);
+    if (local.length || isOffline()) return local.sort((a, b) => a.attempted_at.localeCompare(b.attempted_at)).map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId }) as FollowUpAttempt);
+  }
   const { data, error } = await db
     .from("follow_up_attempts")
     .select("*")
@@ -120,6 +142,11 @@ export async function listAttempts(follow_up_id: string): Promise<FollowUpAttemp
 }
 
 export async function getFollowUpOutcome(follow_up_id: string): Promise<FollowUpOutcomeRow | null> {
+  if (isBrowser()) {
+    const local = await followUpOutcomeStore.getByFollowUp(follow_up_id);
+    if (local) return { ...localRow(local), id: local.remoteId ?? local.localId } as FollowUpOutcomeRow;
+    if (isOffline()) return null;
+  }
   const { data, error } = await db
     .from("follow_up_outcomes")
     .select("*")
@@ -143,6 +170,10 @@ export async function createFollowUp(v: {
   contact_method?: ContactMethod;
   notes?: string;
 }): Promise<FollowUpRow> {
+  if (isBrowser()) {
+    const record = await createAndQueue("follow_ups", followUpStore, { ...v, assigned_to: v.assigned_to ?? await currentUserId(), status: "scheduled", created_by: await currentUserId() });
+    return localRow(record) as FollowUpRow;
+  }
   const actor = await uid();
   const payload = {
     person_id: v.person_id ?? null,
@@ -174,6 +205,14 @@ export async function recordAttempt(v: {
   next_attempt_at?: string;
   notes?: string;
 }): Promise<FollowUpAttempt> {
+  if (isBrowser()) {
+    const record = await createAndQueue("follow_up_attempts", followUpAttemptStore, { ...v, result: v.result ?? null, barrier: v.barrier ?? null, next_attempt_at: v.next_attempt_at ?? null, notes: v.notes ?? null, actor: await currentUserId() });
+    if (v.contacted) {
+      const followUp = await followUpStore.get(v.follow_up_id);
+      if (followUp) await updateAndQueue("follow_ups", followUpStore, followUp.localId, { status: "in_progress" });
+    }
+    return { ...localRow(record), id: record.localId } as FollowUpAttempt;
+  }
   const actor = await uid();
   const { data, error } = await db
     .from("follow_up_attempts")
@@ -209,6 +248,14 @@ export async function completeFollowUp(v: {
   next_action?: string;
   notes?: string;
 }): Promise<FollowUpOutcomeRow> {
+  if (isBrowser()) {
+    const existing = await followUpOutcomeStore.getByFollowUp(v.follow_up_id);
+    const payload = { ...v, barriers: v.barriers ?? [], care_received: v.care_received ?? null, new_symptoms: v.new_symptoms ?? null, recommendations: v.recommendations ?? null, next_follow_up_at: v.next_follow_up_at ?? null, next_action: v.next_action ?? null, notes: v.notes ?? null, recorded_by: await currentUserId() };
+    const outcome = existing ? await updateAndQueue("follow_up_outcomes", followUpOutcomeStore, existing.localId, payload) : await createAndQueue("follow_up_outcomes", followUpOutcomeStore, payload);
+    const followUp = await followUpStore.get(v.follow_up_id);
+    if (followUp) await updateAndQueue("follow_ups", followUpStore, followUp.localId, { status: "completed" });
+    return { ...localRow(outcome), id: outcome.localId } as FollowUpOutcomeRow;
+  }
   const actor = await uid();
   const existing = await getFollowUpOutcome(v.follow_up_id);
   const payload = {
@@ -249,8 +296,20 @@ export async function completeFollowUp(v: {
 }
 
 export async function markMissed(id: string): Promise<void> {
+  if (isBrowser()) {
+    const local = (await followUpStore.get(id)) ?? (await followUpStore.list()).find((row) => row.remoteId === id);
+    if (!local) throw new Error("Not found");
+    await updateAndQueue("follow_ups", followUpStore, local.localId, { status: "missed" });
+    return;
+  }
   await db.from("follow_ups").update({ status: "missed" }).eq("id", id);
 }
 export async function cancelFollowUp(id: string): Promise<void> {
+  if (isBrowser()) {
+    const local = (await followUpStore.get(id)) ?? (await followUpStore.list()).find((row) => row.remoteId === id);
+    if (!local) throw new Error("Not found");
+    await updateAndQueue("follow_ups", followUpStore, local.localId, { status: "cancelled" });
+    return;
+  }
   await db.from("follow_ups").update({ status: "cancelled" }).eq("id", id);
 }

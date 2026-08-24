@@ -115,7 +115,9 @@ function Login() {
 
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" required>
+                Email
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -130,7 +132,9 @@ function Login() {
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" required>
+                  Password
+                </Label>
                 <Link to="/forgot-password" className="text-xs text-primary hover:underline">
                   Forgot password?
                 </Link>

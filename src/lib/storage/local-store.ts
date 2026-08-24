@@ -19,6 +19,8 @@ import type {
   LocalPersonNotes,
   SyncQueueOperation,
   LocalEntity,
+  LocalReferralStatusHistory,
+  LocalReferralOutcome,
 } from "./types";
 
 /**
@@ -60,6 +62,8 @@ function createSyncMetadata(): SyncMetadata {
 function updateSyncTimestamp(metadata: SyncMetadata): SyncMetadata {
   return {
     ...metadata,
+    syncStatus: "pending",
+    syncError: null,
     updatedAt: new Date().toISOString(),
     version: metadata.version + 1,
   };
@@ -683,6 +687,35 @@ export const personNotesStore = {
 
   async count(): Promise<number> {
     return db.person_notes.count();
+  },
+};
+
+export const referralStatusHistoryStore = {
+  async create(data: Omit<LocalReferralStatusHistory, keyof SyncMetadata>): Promise<LocalReferralStatusHistory> {
+    const history = { ...data, ...createSyncMetadata() } as LocalReferralStatusHistory;
+    await db.referral_status_history.add(history);
+    return history;
+  },
+  async listByReferral(referralId: string): Promise<LocalReferralStatusHistory[]> {
+    return db.referral_status_history.where("referral_id").equals(referralId).sortBy("at");
+  },
+};
+
+export const referralOutcomeStore = {
+  async getByReferral(referralId: string): Promise<LocalReferralOutcome | undefined> {
+    return db.referral_outcomes.where("referral_id").equals(referralId).first();
+  },
+  async create(data: Omit<LocalReferralOutcome, keyof SyncMetadata>): Promise<LocalReferralOutcome> {
+    const outcome = { ...data, ...createSyncMetadata() } as LocalReferralOutcome;
+    await db.referral_outcomes.add(outcome);
+    return outcome;
+  },
+  async update(localId: string, updates: Partial<Omit<LocalReferralOutcome, keyof SyncMetadata>>): Promise<LocalReferralOutcome | undefined> {
+    const existing = await db.referral_outcomes.get(localId);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...updateSyncTimestamp(existing), ...updates };
+    await db.referral_outcomes.put(updated);
+    return updated;
   },
 };
 

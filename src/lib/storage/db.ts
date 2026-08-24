@@ -36,6 +36,10 @@ import type {
   LocalFollowUpOutcome,
   LocalPersonNotes,
   SyncQueueOperation,
+  SyncConflict,
+  LocalReferralStatusHistory,
+  LocalReferralOutcome,
+  SyncConflictHistory,
 } from "./types";
 import type { SyncStatusRecord } from "./sync-status";
 
@@ -56,6 +60,10 @@ export class NurtureDB extends Dexie {
   person_notes!: Table<LocalPersonNotes>;
   sync_queue!: Table<SyncQueueOperation>;
   sync_status!: Table<SyncStatusRecord>;
+  sync_conflicts!: Table<SyncConflict>;
+  referral_status_history!: Table<LocalReferralStatusHistory>;
+  referral_outcomes!: Table<LocalReferralOutcome>;
+  sync_conflict_history!: Table<SyncConflictHistory>;
 
   constructor() {
     super("nurture-db");
@@ -76,6 +84,12 @@ export class NurtureDB extends Dexie {
       sync_queue: "&id, syncStatus, priority, queuedAt, retryAfter",
     });
     this.version(2).stores({ sync_status: "&id" });
+    this.version(3).stores({ sync_conflicts: "&id, entityType, localId, remoteId, status, detectedAt" });
+    this.version(4).stores({
+      referral_status_history: "&localId, referral_id, at, syncStatus",
+      referral_outcomes: "&localId, referral_id, syncStatus",
+      sync_conflict_history: "&id, entityType, localId, remoteId, resolvedAt, synchronizationStatus",
+    });
   }
 }
 

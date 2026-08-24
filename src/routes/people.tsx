@@ -20,12 +20,16 @@ import { listWorkflowHouseholds, listWorkflowPersons } from "@/lib/household-per
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/people")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === "string" ? search.q : "",
+  }),
   component: People,
 });
 
 function People() {
   const { roles } = useAuth();
-  const [q, setQ] = useState("");
+  const { q: initialQuery } = Route.useSearch();
+  const [q, setQ] = useState(initialQuery);
   const [community, setCommunity] = useState("all");
   const [status, setStatus] = useState("all");
   const [ageGroup, setAgeGroup] = useState("all");

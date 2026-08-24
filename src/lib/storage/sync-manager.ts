@@ -4,6 +4,7 @@ import { syncQueueStore } from "./local-store";
 import { networkMonitor, type NetworkStatus } from "./network-monitor";
 import { DEFAULT_BATCH_SIZE, listReadyQueue } from "./queue";
 import { getSyncStatusRecord, updateSyncStatus } from "./sync-status";
+import { conflictStore } from "./conflicts";
 import type { LocalEntity, SyncQueueOperation, SyncQueueOperationType } from "./types";
 
 export type SyncEntityType =
@@ -13,6 +14,8 @@ export type SyncEntityType =
   | "child_profiles"
   | "assessments"
   | "referrals"
+  | "referral_status_history"
+  | "referral_outcomes"
   | "follow_ups"
   | "follow_up_attempts"
   | "follow_up_outcomes"
@@ -42,6 +45,8 @@ const syncOrder: SyncEntityType[] = [
   "child_profiles",
   "assessments",
   "referrals",
+  "referral_status_history",
+  "referral_outcomes",
   "follow_ups",
   "follow_up_attempts",
   "follow_up_outcomes",
@@ -66,6 +71,8 @@ const relationStores: Record<string, { table: string; field: string }[]> = {
     { table: "assessments", field: "assessment_id" },
     { table: "referrals", field: "referral_id" },
   ],
+  referral_status_history: [{ table: "referrals", field: "referral_id" }],
+  referral_outcomes: [{ table: "referrals", field: "referral_id" }],
   follow_up_attempts: [{ table: "follow_ups", field: "follow_up_id" }],
   follow_up_outcomes: [{ table: "follow_ups", field: "follow_up_id" }],
   person_notes: [{ table: "persons", field: "person_id" }],
@@ -78,6 +85,8 @@ const localTables: Record<SyncEntityType, string> = {
   child_profiles: "child_profiles",
   assessments: "assessments",
   referrals: "referrals",
+  referral_status_history: "referral_status_history",
+  referral_outcomes: "referral_outcomes",
   follow_ups: "follow_ups",
   follow_up_attempts: "follow_up_attempts",
   follow_up_outcomes: "follow_up_outcomes",
@@ -202,13 +211,14 @@ export async function queueOperation(
   operationType: SyncQueueOperationType,
   payload: Record<string, unknown> = {},
   remoteId: string | null = null,
+  conflictId: string | null = null,
 ): Promise<SyncQueueOperation> {
   const existing = (await syncQueueStore.list()).find(
     (operation) =>
       operation.entityType === entityType &&
       operation.localId === localId &&
       operation.operationType === operationType &&
-      ["pending", "failed"].includes(operation.syncStatus),
+      ["pending", "syncing", "retrying", "failed"].includes(operation.syncStatus),
   );
   if (existing) {
     await syncQueueStore.update(existing.id, {
@@ -217,8 +227,9 @@ export async function queueOperation(
       syncStatus: "pending",
       retryAfter: null,
       lastError: null,
+      conflictId,
     });
-    return { ...existing, payload, remoteId, syncStatus: "pending", retryAfter: null, lastError: null };
+    return { ...existing, payload, remoteId, syncStatus: "pending", retryAfter: null, lastError: null, conflictId };
   }
   return syncQueueStore.add({
     entityType,
@@ -233,6 +244,7 @@ export async function queueOperation(
     queuedAt: new Date().toISOString(),
     retryAfter: null,
     priority: syncOrder.length - syncOrder.indexOf(entityType),
+    conflictId,
   });
 }
 
@@ -258,6 +270,17 @@ export async function queueUpdate(entityType: SyncEntityType, record: LocalEntit
 
 export async function queueDelete(entityType: SyncEntityType, record: LocalEntity): Promise<SyncQueueOperation | null> {
   if (!record.remoteId) {
+    const queued = await syncQueueStore.list();
+    await Promise.all(
+      queued
+        .filter(
+          (operation) =>
+            operation.entityType === entityType &&
+            operation.localId === record.localId &&
+            operation.operationType !== "delete",
+        )
+        .map((operation) => syncQueueStore.delete(operation.id)),
+    );
     await tableFor(entityType).delete(record.localId);
     return null;
   }
@@ -317,9 +340,20 @@ async function performOperation(operation: SyncQueueOperation, client: SupabaseC
 
   if (!remoteId) throw new Error(`Cannot update without remote ID: ${operation.entityType}/${operation.localId}`);
   if (record.lastSyncedAt) {
-    const remote = await table.select("updated_at").eq("id", remoteId).maybeSingle();
+    const remote = await table.select("*").eq("id", remoteId).maybeSingle();
     if (remote.error) throw remote.error;
     if (remote.data?.updated_at && remote.data.updated_at > record.lastSyncedAt) {
+      await conflictStore.create({
+        entityType: operation.entityType,
+        localId: operation.localId,
+        remoteId,
+        localVersion: record.version,
+        remoteVersion: remote.data.updated_at,
+        detectedAt: new Date().toISOString(),
+        localData: { ...record },
+        remoteData: remote.data,
+        operationType: operation.operationType,
+      });
       throw new SyncConflictError(`Remote ${operation.entityType}/${remoteId} changed since last sync`);
     }
   }
@@ -340,7 +374,7 @@ export class SyncManager {
   private onlineHandler?: () => void;
   private unsubscribeNetwork?: () => void;
   private listeners = new Set<SyncListener>();
-  private queuedTrigger = false;
+  private activeSync?: Promise<SyncStatusSnapshot>;
   private snapshot: SyncStatusSnapshot = {
     running: false,
     online: true,
@@ -383,11 +417,15 @@ export class SyncManager {
     this.emit();
   }
 
-  async syncNow(): Promise<SyncStatusSnapshot> {
+  syncNow(): Promise<SyncStatusSnapshot> {
     if (this.syncing) {
-      this.queuedTrigger = true;
-      return this.getStatus();
+      return this.activeSync ?? Promise.resolve(this.getStatus());
     }
+    this.activeSync = this.runSync();
+    return this.activeSync;
+  }
+
+  private async runSync(): Promise<SyncStatusSnapshot> {
     if (this.running && !networkMonitor.isOnline()) {
       this.setEvent("waiting-network", { online: false });
       await this.refreshStatus();
@@ -424,10 +462,7 @@ export class SyncManager {
     } finally {
       this.syncing = false;
       await this.refreshStatus();
-      if (this.queuedTrigger) {
-        this.queuedTrigger = false;
-        void this.syncNow();
-      }
+      this.activeSync = undefined;
     }
     return this.getStatus();
   }
@@ -448,10 +483,7 @@ export class SyncManager {
 
   private scheduleSync(): void {
     if (!this.running) return;
-    if (this.syncing) {
-      this.queuedTrigger = true;
-      return;
-    }
+    if (this.syncing) return;
     void this.syncNow();
   }
 
@@ -476,23 +508,24 @@ export class SyncManager {
   private async process(operation: SyncQueueOperation): Promise<void> {
     const attemptCount = operation.attemptCount + 1;
     await syncQueueStore.update(operation.id, {
-      syncStatus: "pending",
+      syncStatus: "syncing",
       attemptCount,
       lastAttemptedAt: new Date().toISOString(),
     });
     try {
       await performOperation(operation, this.client);
       await syncQueueStore.delete(operation.id);
+      if (operation.conflictId) await conflictStore.markHistorySync(operation.conflictId, "synced");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof SyncConflictError) {
-        await syncQueueStore.update(operation.id, { syncStatus: "conflict", lastError: message, retryAfter: null });
+        await syncQueueStore.update(operation.id, { syncStatus: "conflict", lastError: message, retryAfter: null, conflictId: `${operation.entityType}:${operation.localId}` });
         await updateRecordStatus(operation, { syncStatus: "conflict", syncError: message });
         return;
       }
       const permanent = isPermanentError(error) || attemptCount >= 8;
       await syncQueueStore.update(operation.id, {
-        syncStatus: permanent ? "failed" : "failed",
+        syncStatus: "failed",
         lastError: message,
         retryAfter: permanent ? null : backoff(attemptCount),
       });
@@ -501,6 +534,7 @@ export class SyncManager {
         totalFailed: metrics.totalFailed + 1,
         totalRetried: metrics.totalRetried + (attemptCount > 1 ? 1 : 0),
       });
+      if (operation.conflictId) await conflictStore.markHistorySync(operation.conflictId, "failed");
       await updateRecordStatus(operation, { syncStatus: "failed", syncError: message });
       if (error instanceof DependencyPendingError) return;
     }
@@ -510,7 +544,7 @@ export class SyncManager {
     const operations = await syncQueueStore.list();
     this.snapshot = {
       ...this.snapshot,
-      pending: operations.filter((operation) => ["pending", "failed"].includes(operation.syncStatus)).length,
+      pending: operations.filter((operation) => ["pending", "syncing", "retrying", "failed"].includes(operation.syncStatus)).length,
       failed: operations.filter((operation) => operation.syncStatus === "failed").length,
       conflicts: operations.filter((operation) => operation.syncStatus === "conflict").length,
     };

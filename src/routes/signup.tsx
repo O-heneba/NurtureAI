@@ -59,7 +59,7 @@ function Signup() {
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div className="space-y-1.5">
-            <Label>Full name</Label>
+            <Label required>Full name</Label>
             <Input
               value={v.fullName}
               onChange={(e) => setV({ ...v, fullName: e.target.value })}
@@ -68,7 +68,7 @@ function Signup() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Email</Label>
+            <Label required>Email</Label>
             <Input
               type="email"
               value={v.email}
@@ -77,7 +77,7 @@ function Signup() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Password</Label>
+            <Label required>Password</Label>
             <Input
               type="password"
               value={v.password}

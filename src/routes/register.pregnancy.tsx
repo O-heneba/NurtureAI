@@ -143,7 +143,7 @@ function RegisterPregnancy() {
       <Card className="rounded-xl max-w-3xl">
         <CardContent className="p-6 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Pregnant person" className="sm:col-span-2">
+            <Field label="Pregnant person" required className="sm:col-span-2">
               <Select value={personId} onValueChange={setPersonId}>
                 <SelectTrigger>
                   <SelectValue placeholder={persons.length ? "Select person" : "Loading…"} />
@@ -178,7 +178,7 @@ function RegisterPregnancy() {
                 max={45}
               />
             </Field>
-            <Field label="Expected delivery date">
+            <Field label="Expected delivery date" required>
               <Input type="date" value={edd} onChange={(e) => setEDD(e.target.value)} />
             </Field>
             <Field label="ANC visits completed">
@@ -285,16 +285,18 @@ function RegisterPregnancy() {
 
 function Field({
   label,
+  required,
   className,
   children,
 }: {
   label: string;
+  required?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className={"grid gap-1.5 " + (className ?? "")}>
-      <Label>{label}</Label>
+      <Label required={required}>{label}</Label>
       {children}
     </div>
   );

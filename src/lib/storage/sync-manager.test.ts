@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "./db";
 import { householdStore, personStore, syncQueueStore } from "./local-store";
-import { SyncManager, queueCreate, queueDelete } from "./sync-manager";
+import { SyncManager, queueCreate, queueDelete, queueUpdate } from "./sync-manager";
 import {
   createWorkflowHousehold,
   createWorkflowPerson,
@@ -71,6 +71,71 @@ describe("offline synchronization infrastructure", () => {
     const operation = await queueDelete("households", tombstone!);
     expect(operation?.operationType).toBe("delete");
     expect((await syncQueueStore.list()).some((item) => item.operationType === "delete")).toBe(true);
+  });
+
+  it("removes queued local-only writes when an unsynced record is deleted", async () => {
+    const household = await householdStore.create(householdData);
+    await queueCreate("households", household);
+
+    await queueDelete("households", household);
+
+    expect(await householdStore.get(household.localId)).toBeUndefined();
+    expect(await syncQueueStore.list()).toEqual([]);
+  });
+
+  it("retries an operation left syncing after an interrupted run", async () => {
+    const household = await householdStore.create(householdData);
+    const operation = await queueCreate("households", household);
+    await syncQueueStore.update(operation.id, { syncStatus: "syncing" });
+    const manager = new SyncManager({
+      from: () => ({
+        insert: () => ({ select: () => ({ single: async () => ({ data: { id: "remote-household" }, error: null }) }) }),
+      }),
+    });
+
+    await manager.syncNow();
+
+    expect(await syncQueueStore.list()).toEqual([]);
+    expect((await householdStore.get(household.localId))?.remoteId).toBe("remote-household");
+  });
+
+  it("synchronizes create before the latest coalesced update", async () => {
+    const household = await householdStore.create(householdData);
+    await queueCreate("households", household);
+    const edited = { ...(await householdStore.update(household.localId, { head_name: "Final name" }))! };
+    await queueUpdate("households", edited);
+    await householdStore.update(household.localId, { head_name: "Last name" });
+    await queueUpdate("households", { ...(await householdStore.get(household.localId))! });
+    const calls: string[] = [];
+    let remote: Record<string, unknown> = { updated_at: new Date(0).toISOString() };
+    const manager = new SyncManager({
+      from: (tableName: string) => ({
+        insert: () => ({ select: () => ({ single: async () => { calls.push("create"); return { data: { id: "remote-household" }, error: null }; } }) }),
+        update: (payload: Record<string, unknown>) => ({ eq: async () => { calls.push(String(payload.head_name)); remote = { ...remote, ...payload }; return { error: null }; } }),
+        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: remote, error: null }) }) }),
+      }),
+    });
+
+    await manager.syncNow();
+
+    expect(calls).toEqual(["create", "Last name"]);
+    expect((await householdStore.get(household.localId))?.syncStatus).toBe("synced");
+  });
+
+  it("deduplicates concurrent sync triggers", async () => {
+    const household = await householdStore.create(householdData);
+    await queueCreate("households", household);
+    let creates = 0;
+    const manager = new SyncManager({
+      from: () => ({
+        insert: () => ({ select: () => ({ single: async () => { creates += 1; return { data: { id: "remote-household" }, error: null }; } }) }),
+      }),
+    });
+
+    await Promise.all([manager.syncNow(), manager.syncNow(), manager.syncNow()]);
+
+    expect(creates).toBe(1);
+    expect(await syncQueueStore.list()).toEqual([]);
   });
 
   it("maps a successful remote ID and retries a transient failure", async () => {

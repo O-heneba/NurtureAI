@@ -42,7 +42,7 @@ function ResetPassword() {
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div className="space-y-1.5">
-            <Label>New password</Label>
+            <Label required>New password</Label>
             <Input
               type="password"
               value={password}
