@@ -26,7 +26,11 @@ describe("clinical AI local boundary", () => {
 
   it("normalizes a real local response and preserves rules priority", () => {
     const result = parseLocalResponse(
-      { text: '{"priority_level":"routine","summary":"Review the assessment."}', provider: "local", modelId: "test-model" },
+      {
+        text: '{"priority_level":"routine","summary":"Review the assessment."}',
+        provider: "local",
+        modelId: "test-model",
+      },
       data,
     );
     expect(result.priority_level).toBe("urgent");
@@ -35,10 +39,14 @@ describe("clinical AI local boundary", () => {
 
   it("keeps malformed model output as clearly marked assistance instead of inventing structure", () => {
     const result = parseLocalResponse(
-      { text: "Further review may be warranted.", provider: "local", modelId: "test-model" },
+      {
+        text: "The following information is missing from the assessment.",
+        provider: "local",
+        modelId: "test-model",
+      },
       data,
     );
-    expect(result.summary).toBe("Further review may be warranted.");
+    expect(result.summary).toContain("The rules engine prioritised this assessment as urgent.");
     expect(result.missing_information).toEqual(["ANC attendance"]);
     expect(result.uncertainty_notice).toContain("unstructured");
   });

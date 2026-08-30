@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { useAI } from "@/ai";
+import { useAI, type AISource } from "@/ai";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/assistant")({
@@ -22,7 +22,7 @@ const topics = [
   { icon: Utensils, label: "Meal ideas", tone: "bg-success/10 text-success" },
 ];
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; sources?: AISource[]; offline?: boolean };
 
 const initialMessages: Msg[] = [
   {
@@ -46,7 +46,10 @@ function Assistant() {
     setLoading(true);
     try {
       const res = await ai.generate({ messages: next });
-      setMessages([...next, { role: "assistant", content: res.text }]);
+      setMessages([
+        ...next,
+        { role: "assistant", content: res.text, sources: res.sources, offline: res.offline },
+      ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "AI request failed";
       toast.error(msg);
@@ -126,15 +129,35 @@ function Assistant() {
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <div
-                  className={cn(
-                    "rounded-2xl px-4 py-2.5 text-sm max-w-[80%] whitespace-pre-line",
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-tr-sm"
-                      : "bg-accent rounded-tl-sm",
+                <div className="max-w-[80%]">
+                  <div
+                    className={cn(
+                      "rounded-2xl px-4 py-2.5 text-sm whitespace-pre-line",
+                      m.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-tr-sm"
+                        : "bg-accent rounded-tl-sm",
+                    )}
+                  >
+                    {m.content}
+                  </div>
+                  {m.role === "assistant" && m.sources && m.sources.length > 0 && (
+                    <details className="mt-2 rounded-lg border bg-background px-3 py-2 text-xs">
+                      <summary className="cursor-pointer font-medium">Sources</summary>
+                      <ul className="mt-2 space-y-2 text-muted-foreground">
+                        {m.sources.map((source, index) => (
+                          <li key={`${source.originalFilename}-${index}`}>
+                            <span className="font-medium text-foreground">
+                              {source.sourceOrganization} - {source.title}
+                            </span>
+                            <span className="block">
+                              {source.originalFilename} | {source.section ?? "Section unavailable"}
+                              {source.pageNumber ? ` | page ${source.pageNumber}` : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
                   )}
-                >
-                  {m.content}
                 </div>
               </div>
             ))}

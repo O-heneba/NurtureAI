@@ -1,7 +1,4 @@
-import { useServerFn } from "@tanstack/react-start";
-import { analyzeAssessment } from "@/lib/ai.functions";
 import { aiService } from "../service";
-import { isModelCached } from "../model/model-manager";
 import type { AIResponse } from "../types";
 import { preserveRulesPriority } from "@/lib/ai-safety";
 
@@ -34,48 +31,89 @@ export function localAssessmentPrompt(data: ClinicalAssessmentInput): string {
 
 export function parseLocalResponse(response: AIResponse, data: ClinicalAssessmentInput) {
   const raw = response.text.trim();
+  const ruleMessages = data.rules.flags
+    .map((flag) => {
+      if (!flag || typeof flag !== "object" || !("message" in flag)) return "";
+      const message = (flag as { message?: unknown }).message;
+      return typeof message === "string" ? message : "";
+    })
+    .filter(Boolean);
+  const safeNextSteps = (priority: string) =>
+    priority === "urgent"
+      ? [
+          "Seek urgent professional clinical assessment now.",
+          "Do not delay referral if danger signs are present.",
+        ]
+      : priority === "priority_review"
+        ? [
+            "Arrange prompt professional clinical review.",
+            "Follow up actively and escalate if symptoms worsen.",
+          ]
+        : priority === "monitor"
+          ? [
+              "Continue care with active monitoring.",
+              "Schedule follow-up according to local protocol.",
+            ]
+          : ["Continue routine care."];
   try {
-    const parsed = JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+    const cleaned = raw.replace(/^```(?:json)?\s*|\s*```$/g, "");
+    const jsonStart = cleaned.indexOf("{");
+    const jsonEnd = cleaned.lastIndexOf("}");
+    const parsed = JSON.parse(
+      jsonStart >= 0 && jsonEnd > jsonStart ? cleaned.slice(jsonStart, jsonEnd + 1) : cleaned,
+    );
+    const preserved = preserveRulesPriority(parsed, data.rules.priority as any);
+    const modelSteps = Array.isArray(preserved.recommended_next_steps)
+      ? preserved.recommended_next_steps
+      : [];
     return {
-      ...preserveRulesPriority(parsed, data.rules.priority as any),
+      ...preserved,
+      recommended_next_steps:
+        data.rules.priority === "routine"
+          ? modelSteps
+          : modelSteps.length > 0 &&
+              !modelSteps.some((step: unknown) => /routine care/i.test(String(step)))
+            ? modelSteps
+            : safeNextSteps(data.rules.priority),
       provider: response.provider,
       model_id: response.modelId,
+      sources: response.sources,
     };
   } catch {
+    const rulesSummary = ruleMessages.length
+      ? `The rules engine prioritised this assessment as ${data.rules.priority} because ${ruleMessages.join("; ")}`
+      : `The rules engine prioritised this assessment as ${data.rules.priority}.`;
     return {
-      summary: raw,
-      contributing_factors: data.rules.flags.map((flag: any) => flag.message).filter(Boolean),
+      summary: rulesSummary,
+      contributing_factors: ruleMessages,
       missing_information: data.rules.missing,
-      recommended_next_steps: [],
+      recommended_next_steps: safeNextSteps(data.rules.priority),
       follow_up_suggestion: "",
       referral_consideration: "",
       nutrition_guidance: "",
-      uncertainty_notice: "The local model returned unstructured guidance. A qualified health worker must review it against the rules-based priority.",
+      uncertainty_notice:
+        "The local model returned unstructured guidance. A qualified health worker must review it against the rules-based priority.",
       priority_level: data.rules.priority,
       provider: response.provider,
       model_id: response.modelId,
+      sources: response.sources,
     };
   }
 }
 
-async function analyzeLocally(data: ClinicalAssessmentInput) {
-  const response = await aiService.generate({ prompt: localAssessmentPrompt(data), maxTokens: 240, temperature: 0.1 });
+async function analyzeWithSelectedProvider(data: ClinicalAssessmentInput) {
+  const response = await aiService.generate({
+    prompt: localAssessmentPrompt(data),
+    maxTokens: 240,
+    temperature: 0.1,
+    responseFormat: "json",
+  });
   return parseLocalResponse(response, data);
 }
 
-/** Uses cached local inference first and never calls the cloud provider offline. */
+/** Uses cloud first online, local only offline, and preserves rules priority in either path. */
 export function useClinicalAI() {
-  const analyzeWithCloud = useServerFn(analyzeAssessment);
-
   return async ({ data }: { data: ClinicalAssessmentInput }) => {
-    const localReady = aiService.getState().status === "ready" || (await isModelCached());
-    if (shouldUseLocalAI({ offline: isOffline(), localReady })) {
-      try {
-        return await analyzeLocally(data);
-      } catch (error) {
-        if (isOffline()) throw error;
-      }
-    }
-    return analyzeWithCloud({ data });
+    return analyzeWithSelectedProvider(data);
   };
 }

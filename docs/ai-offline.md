@@ -23,3 +23,11 @@ This MVP runtime path has been type-checked, but the model download and inferenc
 Change `AI_MODEL.id` and `revision`, then initialize while online to populate the browser cache. A later cache migration can use a versioned cache prefix. To add a provider, implement `AIProvider` in `src/ai/providers`, then pass it to `createAIService`; React code continues to use the same `AIService` methods.
 
 Sensitive health information should stay with the local provider unless a user-approved, authenticated server proxy is explicitly configured. AI output is decision support only and requires human review; it must not be presented as diagnosis or a replacement for clinical protocols.
+
+## Cloud Gemini
+
+Online cloud assessment and nutrition requests use Google Gemini directly through the server-side Google AI Studio API. Set `GEMINI_API_KEY` (or `GOOGLE_GEMINI_API_KEY`) only in the server/deployment environment; never expose it as a `VITE_*` variable or send it from the browser. Gemini 2.5 Flash may be used with Google AI Studio's free tier subject to Google's quotas and terms. Local AI remains the first choice when offline or already ready.
+
+## Local knowledge base
+
+Run `npm run knowledge:ingest` after adding or replacing files in `public/knowledge/`. The script discovers PDF, Markdown, TXT, and JSON documents, extracts text at build time, and writes `public/knowledge/index.json`. The browser searches the pre-generated chunks locally and passes only the top five relevant chunks to the existing SmolLM2 provider. The service worker caches the index for later offline use. Source citations are returned with local responses; source authority only boosts already relevant matches and cannot create a match by itself.

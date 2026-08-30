@@ -14,12 +14,23 @@ export type AIRequest = {
   signal?: AbortSignal;
   maxTokens?: number;
   temperature?: number;
+  responseFormat?: "text" | "json";
 };
 
 export type AIResponse = {
   text: string;
   provider: AIProviderKind;
   modelId: string;
+  sources?: AISource[];
+  offline?: boolean;
+};
+
+export type AISource = {
+  title: string;
+  originalFilename: string;
+  sourceOrganization: string;
+  section?: string;
+  pageNumber?: number;
 };
 
 export type AIState = {
@@ -29,6 +40,8 @@ export type AIState = {
   progress: number;
   isOnline: boolean;
   error: AIError | null;
+  cloudFallback: boolean;
+  localAvailable: boolean;
 };
 
 export type AIErrorCode =

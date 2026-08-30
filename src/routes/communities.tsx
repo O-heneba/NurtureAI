@@ -25,8 +25,11 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { listCommunities } from "@/lib/registrations";
-import { useAuth } from "@/hooks/use-auth";
+import { useServerFn } from "@tanstack/react-start";
+import { fetchCommunities, sanitizeCommunityRecords } from "@/lib/server.functions";
+import { summarizeCommunityMetrics } from "@/lib/community-metrics";
+import { listHouseholds, listPersons } from "@/lib/registrations";
+import bundledCommunities from "../../data/northern-ghana-community-records.json";
 
 type CommunitySummary = {
   id: string;
@@ -51,7 +54,7 @@ export const Route = createFileRoute("/communities")({
 });
 
 function Communities() {
-  const { roles } = useAuth();
+  const fetchCommunitiesFn = useServerFn(fetchCommunities);
   const [communities, setCommunities] = useState<CommunitySummary[]>([]);
   const [q, setQ] = useState("");
   const [district, setDistrict] = useState<string>("all");
@@ -61,52 +64,152 @@ function Communities() {
   const [sortBy, setSortBy] = useState<"coverage" | "population" | "name">("coverage");
 
   useEffect(() => {
-    listCommunities()
-      .then((rows) =>
+    let active = true;
+
+    async function loadCommunities() {
+      try {
+        const [rows, households, people] = await Promise.all([
+          fetchCommunitiesFn(),
+          listHouseholds(),
+          listPersons(),
+        ]);
+
+        if (!active) return;
+
+        const sanitized = sanitizeCommunityRecords(
+          rows as Array<Record<string, unknown>>,
+          bundledCommunities as Array<Record<string, unknown>>,
+        );
+
         setCommunities(
-          rows.map((row) => ({
+          summarizeCommunityMetrics(
+            sanitized.map((row) => ({
+              id: String(row.id ?? row.community_code ?? row.name),
+              name: String(row.name ?? "Unknown community"),
+              district: typeof row.district === "string" ? row.district : null,
+              region: typeof row.region === "string" ? row.region : null,
+              sub_district: typeof row.sub_district === "string" ? row.sub_district : null,
+              chps_zone: typeof row.chps_zone === "string" ? row.chps_zone : null,
+              status: typeof row.status === "string" ? row.status : null,
+            })),
+            households as Array<{ id: string; community_id?: string | null }>,
+            people as Array<{ id: string; household_id?: string | null; profile_types?: string[] | null; date_of_birth?: string | null }>,
+          ).map((row) => ({
             id: row.id,
             name: row.name,
-            district: null,
-            region: null,
-            chpsZone: null,
-            worker: null,
-            status: "active",
-            population: 0,
-            coverage: 0,
-            households: 0,
-            pregnant: 0,
-            under5: 0,
-            highRisk: 0,
-            dataCoverageIncomplete: false,
-            subDistrict: null,
+            district: row.district,
+            region: row.region,
+            chpsZone: row.chpsZone,
+            worker: row.worker,
+            status: row.status,
+            population: row.population,
+            coverage: row.coverage,
+            households: row.households,
+            pregnant: row.pregnant,
+            under5: row.under5,
+            highRisk: row.highRisk,
+            dataCoverageIncomplete: row.dataCoverageIncomplete,
+            subDistrict: row.subDistrict,
           })),
-        ),
-      )
-      .catch(() => setCommunities([]));
+        );
+      } catch {
+        const fallback = sanitizeCommunityRecords(
+          [],
+          bundledCommunities as Array<Record<string, unknown>>,
+        );
+
+        if (active) {
+          setCommunities(
+            summarizeCommunityMetrics(
+              fallback.map((row) => ({
+                id: String(row.id ?? row.community_code ?? row.name),
+                name: String(row.name ?? "Unknown community"),
+                district: typeof row.district === "string" ? row.district : null,
+                region: typeof row.region === "string" ? row.region : null,
+                sub_district: typeof row.sub_district === "string" ? row.sub_district : null,
+                chps_zone: typeof row.chps_zone === "string" ? row.chps_zone : null,
+                status: typeof row.status === "string" ? row.status : null,
+              })),
+              [],
+              [],
+            ).map((row) => ({
+              id: row.id,
+              name: row.name,
+              district: row.district,
+              region: row.region,
+              chpsZone: row.chpsZone,
+              worker: row.worker,
+              status: row.status,
+              population: row.population,
+              coverage: row.coverage,
+              households: row.households,
+              pregnant: row.pregnant,
+              under5: row.under5,
+              highRisk: row.highRisk,
+              dataCoverageIncomplete: row.dataCoverageIncomplete,
+              subDistrict: row.subDistrict,
+            })),
+          );
+        }
+      }
+    }
+
+    loadCommunities();
+    return () => { active = false; };
   }, []);
 
-  const accessibleCommunities = useMemo(() => {
-    if (!roles.length) return [];
-    return communities;
-  }, [communities, roles]);
+  const accessibleCommunities = communities;
 
   const allDistricts = useMemo(
-    () => Array.from(new Set(accessibleCommunities.map((c) => c.district).filter(Boolean))) as string[],
-    [accessibleCommunities],
+    () =>
+      Array.from(
+        new Set(
+          accessibleCommunities
+            .filter((c) => region === "all" || c.region === region)
+            .map((c) => c.district)
+            .filter(Boolean),
+        ),
+      ) as string[],
+    [accessibleCommunities, region],
   );
   const allRegions = useMemo(
-    () => Array.from(new Set(accessibleCommunities.map((c) => c.region).filter(Boolean))) as string[],
+    () =>
+      Array.from(new Set(accessibleCommunities.map((c) => c.region).filter(Boolean))) as string[],
     [accessibleCommunities],
   );
   const allChpsZones = useMemo(
-    () => Array.from(new Set(accessibleCommunities.map((c) => c.chpsZone).filter(Boolean))) as string[],
-    [accessibleCommunities],
+    () =>
+      Array.from(
+        new Set(
+          accessibleCommunities
+            .filter(
+              (c) =>
+                (region === "all" || c.region === region) &&
+                (district === "all" || c.district === district),
+            )
+            .map((c) => c.chpsZone)
+            .filter(Boolean),
+        ),
+      ) as string[],
+    [accessibleCommunities, region, district],
   );
+
+  useEffect(() => {
+    if (district !== "all" && !allDistricts.includes(district)) {
+      setDistrict("all");
+    }
+  }, [allDistricts, district]);
+
+  useEffect(() => {
+    if (chpsZone !== "all" && !allChpsZones.includes(chpsZone)) {
+      setChpsZone("all");
+    }
+  }, [allChpsZones, chpsZone]);
 
   const filtered = useMemo(() => {
     const next = accessibleCommunities.filter((c) => {
-      const haystack = `${c.name} ${c.district ?? ""} ${c.subDistrict ?? ""} ${c.chpsZone ?? ""} ${c.worker ?? ""}`.toLowerCase();
+      const haystack =
+        `${c.name} ${c.district ?? ""} ${c.subDistrict ?? ""} ${c.chpsZone ?? ""} ${c.worker ?? ""}`.toLowerCase();
       const matchesQuery = haystack.includes(q.toLowerCase());
       const matchesDistrict = district === "all" || c.district === district;
       const matchesRegion = region === "all" || c.region === region;
@@ -149,7 +252,13 @@ function Communities() {
             className="pl-9"
           />
         </div>
-        <Select value={district} onValueChange={setDistrict}>
+        <Select
+          value={district}
+          onValueChange={(value) => {
+            setDistrict(value);
+            setChpsZone("all");
+          }}
+        >
           <SelectTrigger className="w-56">
             <SelectValue placeholder="Filter by district" />
           </SelectTrigger>
@@ -162,7 +271,14 @@ function Communities() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={region} onValueChange={setRegion}>
+        <Select
+          value={region}
+          onValueChange={(value) => {
+            setRegion(value);
+            setDistrict("all");
+            setChpsZone("all");
+          }}
+        >
           <SelectTrigger className="w-56">
             <SelectValue placeholder="Filter by region" />
           </SelectTrigger>

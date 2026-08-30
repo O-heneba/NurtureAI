@@ -1,6 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AI_MODEL, useAI, type AIProviderKind } from "@/ai";
+import {
+  AI_MODEL,
+  loadKnowledgeIndex,
+  searchLocalKnowledge,
+  useAI,
+  type AIProviderKind,
+} from "@/ai";
+import type { KnowledgeIndex, KnowledgeResult } from "@/ai/services/knowledge";
 import {
   getSelectedRuntime,
   isLocalRuntimeSupported,
@@ -12,7 +19,13 @@ export const Route = createFileRoute("/dev/ai")({
   component: AIDevelopmentCheck,
 });
 
-const PROMPT = "Explain cloud computing in simple terms.";
+const PROMPT = "What nutrition guidance is relevant during pregnancy?";
+const DEMO_QUESTIONS = [
+  "What is CHPS?",
+  "What nutrition guidance is relevant during pregnancy?",
+  "What is complementary feeding?",
+  "What should a CHPS worker consider when referral is required?",
+];
 
 function AIDevelopmentCheck() {
   const ai = useAI();
@@ -26,6 +39,9 @@ function AIDevelopmentCheck() {
   const [runtime, setRuntime] = useState<"webgpu" | "wasm" | "unsupported">("unsupported");
   const [webGPU, setWebGPU] = useState(false);
   const [wasm, setWasm] = useState(false);
+  const [knowledge, setKnowledge] = useState<KnowledgeIndex | null>(null);
+  const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
+  const [retrieved, setRetrieved] = useState<KnowledgeResult[]>([]);
 
   useEffect(() => {
     setRuntime(getSelectedRuntime());
@@ -46,11 +62,22 @@ function AIDevelopmentCheck() {
     void refreshCache();
   }, [ai.status]);
 
+  useEffect(() => {
+    void loadKnowledgeIndex()
+      .then(setKnowledge)
+      .catch((error: unknown) => {
+        setKnowledgeError(error instanceof Error ? error.message : "Knowledge index unavailable.");
+      });
+  }, []);
+
   async function generate() {
     setResponse("");
     setGenerationError(null);
+    setRetrieved([]);
     const started = performance.now();
     try {
+      const localResults = await searchLocalKnowledge(prompt);
+      setRetrieved(localResults);
       const result = await ai.generate({ prompt, maxTokens: 120, temperature: 0.2 });
       setResponse(result.text);
       setProvider(result.provider);
@@ -81,6 +108,11 @@ function AIDevelopmentCheck() {
     ["Model loading", ai.isLoading ? "Yes" : "No"],
     ["Loading progress", `${ai.progress}%`],
     ["AI ready", ai.isReady ? "Yes" : "No"],
+    [
+      "Knowledge documents",
+      knowledge ? String(knowledge.documents.length) : knowledgeError ? "Error" : "Loading...",
+    ],
+    ["Knowledge chunks", knowledge ? String(knowledge.chunks.length) : "-"],
     ["Generation time", generationMs === null ? "-" : `${generationMs} ms`],
   ];
 
@@ -108,6 +140,22 @@ function AIDevelopmentCheck() {
           ))}
         </section>
 
+        {knowledge && (
+          <section className="rounded-lg border p-4">
+            <h2 className="text-sm font-medium">Knowledge Base</h2>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm">
+              {Array.from(new Set(knowledge.documents.flatMap((document) => document.topic)))
+                .sort()
+                .map((topic) => (
+                  <span key={topic} className="rounded-full bg-muted px-3 py-1">
+                    {topic.replaceAll("_", " ")}
+                  </span>
+                ))}
+            </div>
+          </section>
+        )}
+        {knowledgeError && <p className="text-sm text-destructive">{knowledgeError}</p>}
+
         <section className="space-y-3 rounded-lg border p-4">
           <label className="block text-sm font-medium" htmlFor="ai-prompt">
             Prompt
@@ -118,6 +166,17 @@ function AIDevelopmentCheck() {
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
           />
+          <div className="flex flex-wrap gap-2">
+            {DEMO_QUESTIONS.map((question) => (
+              <button
+                key={question}
+                className="rounded-md border px-3 py-1.5 text-left text-xs hover:bg-muted"
+                onClick={() => setPrompt(question)}
+              >
+                {question}
+              </button>
+            ))}
+          </div>
           <button
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             disabled={ai.isLoading || !prompt.trim() || !wasm}
@@ -137,6 +196,42 @@ function AIDevelopmentCheck() {
               {response || "No response yet."}
             </p>
           </div>
+          {!!retrieved.length && (
+            <section className="border-t pt-3">
+              <h2 className="text-sm font-medium">Sources</h2>
+              <ul className="mt-2 space-y-2 text-sm">
+                {(response ? retrieved : []).map((source) => (
+                  <li key={source.chunkId}>
+                    <span className="font-medium">
+                      {source.sourceOrganization} - {source.title}
+                    </span>
+                    <span className="block text-muted-foreground">
+                      {source.originalFilename} | {source.section ?? "unknown"}
+                      {source.pageNumber ? ` | page ${source.pageNumber}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <details className="mt-3 text-xs">
+                <summary className="cursor-pointer font-medium">DEBUG</summary>
+                <pre className="mt-2 max-h-72 overflow-auto rounded-md bg-muted p-3 whitespace-pre-wrap">
+                  {JSON.stringify(
+                    {
+                      query: prompt,
+                      retrieved: retrieved.map(({ chunkId, title, score, originalFilename }) => ({
+                        chunkId,
+                        title,
+                        score,
+                        originalFilename,
+                      })),
+                    },
+                    null,
+                    2,
+                  )}
+                </pre>
+              </details>
+            </section>
+          )}
         </section>
       </div>
     </main>

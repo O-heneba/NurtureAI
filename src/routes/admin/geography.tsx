@@ -30,6 +30,7 @@ import {
   updateSubDistrict,
   deleteSubDistrict,
   seedGeography,
+  seedCommunities,
 } from "@/lib/server.functions";
 
 export const Route = createFileRoute("/admin/geography")({
@@ -54,6 +55,7 @@ function AdminGeography() {
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
+  const [communitySeedLoading, setCommunitySeedLoading] = useState(false);
   const [regionName, setRegionName] = useState("");
   const [districtName, setDistrictName] = useState("");
   const [gpsLat, setGpsLat] = useState("");
@@ -76,6 +78,7 @@ function AdminGeography() {
   const updateSubDistrictFn = useServerFn(updateSubDistrict);
   const deleteSubDistrictFn = useServerFn(deleteSubDistrict);
   const seedGeographyFn = useServerFn(seedGeography);
+  const seedCommunitiesFn = useServerFn(seedCommunities);
 
   const selectedRegionName = useMemo(
     () => regions.find((region) => region.id === selectedRegion)?.name ?? "",
@@ -231,6 +234,18 @@ function AdminGeography() {
       toast.error(e instanceof Error ? e.message : "Unable to seed geography");
     } finally {
       setSeedLoading(false);
+    }
+  }
+
+  async function onSeedCommunities() {
+    setCommunitySeedLoading(true);
+    try {
+      const added = await seedCommunitiesFn();
+      toast.success(`Seed imported ${added} communities`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Unable to seed communities");
+    } finally {
+      setCommunitySeedLoading(false);
     }
   }
 
@@ -533,6 +548,16 @@ function AdminGeography() {
                     "Seed geography from JSON"
                   )}
                 </Button>
+              </div>
+              <div className="mt-6 border-t pt-4">
+                <div className="text-sm text-muted-foreground">
+                  Import the 270 named communities into their districts.
+                </div>
+                <div className="mt-4">
+                  <Button onClick={onSeedCommunities} disabled={communitySeedLoading}>
+                    {communitySeedLoading ? "Seeding communities…" : "Seed communities from JSON"}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

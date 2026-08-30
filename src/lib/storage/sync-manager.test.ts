@@ -11,6 +11,7 @@ import {
   updateWorkflowHousehold,
   updateWorkflowPerson,
 } from "@/lib/household-person.service";
+import { listHouseholdsByCommunity } from "@/lib/registrations";
 
 const householdData = {
   community_id: "existing-community-id",
@@ -243,5 +244,108 @@ describe("offline synchronization infrastructure", () => {
     expect(await syncQueueStore.list()).toEqual([]);
     expect((await householdStore.get(household.localId))?.syncStatus).toBe("synced");
     expect((await personStore.get(person.localId))?.syncStatus).toBe("synced");
+  });
+
+  it("keeps referral status history in the live status-history schema", async () => {
+    const history = {
+      localId: "history-local-id",
+      remoteId: null,
+      syncStatus: "pending",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastSyncedAt: null,
+      syncError: null,
+      version: 1,
+      referral_id: "referral-1",
+      from_status: "draft",
+      to_status: "submitted",
+      note: "Referral submitted",
+      actor: "user-1",
+      at: new Date().toISOString(),
+    };
+
+    const payload = (await queueCreate("referral_status_history", history as any)).payload;
+
+    expect(payload).not.toHaveProperty("created_at");
+    expect(payload).toHaveProperty("at");
+    expect(payload).toMatchObject({ referral_id: "referral-1", to_status: "submitted" });
+  });
+
+  it("loads community household records from local storage when no remote data is available", async () => {
+    await householdStore.create({
+      community_id: "community-1",
+      house_no: "H-1",
+      head_name: "Ama Boateng",
+      phone: null,
+      address: null,
+      notes: "Needs follow-up",
+      created_by: null,
+      barriers: [],
+      draft: false,
+    });
+
+    const households = await listHouseholdsByCommunity("community-1");
+    expect(households).toHaveLength(1);
+    expect(households[0]).toMatchObject({ community_id: "community-1", head_name: "Ama Boateng" });
+  });
+
+  it("rejects assigning a person to a household that does not exist", async () => {
+    await expect(
+      createWorkflowPerson({
+        full_name: "Nora Harriet",
+        household_id: "missing-household-id",
+        sex: "F",
+        date_of_birth: "1998-02-01",
+      }),
+    ).rejects.toThrow(/household/i);
+
+    const household = await createWorkflowHousehold(householdData);
+    const person = await createWorkflowPerson({
+      full_name: "Nora Harriet",
+      household_id: household.localId,
+      sex: "F",
+      date_of_birth: "1998-02-01",
+    });
+
+    await expect(updateWorkflowPerson(person.localId, { household_id: "missing-household-id" })).rejects.toThrow(/household/i);
+  });
+
+  it("drops a stale invalid household reference from a queued person update instead of retrying the FK failure", async () => {
+    const person = await personStore.create({
+      full_name: "Nora Harriet",
+      household_id: "missing-household-id",
+      sex: "F",
+      date_of_birth: "1998-02-01",
+      created_by: null,
+      notes: null,
+      phone: null,
+      national_id: null,
+      preferred_name: null,
+      marital_status: null,
+      occupation: null,
+      education: null,
+      disability_status: null,
+      emergency_contact: null,
+      profile_types: [],
+      priority_status: "routine",
+      draft: false,
+    });
+
+    await queueUpdate("persons", { ...person, household_id: "missing-household-id" });
+
+    const client = {
+      from: () => ({
+        update: (payload: Record<string, unknown>) => ({
+          eq: async () => {
+            expect(payload.household_id).toBeNull();
+            return { error: null };
+          },
+        }),
+      }),
+    };
+
+    await new SyncManager(client as any).syncNow();
+    expect((await personStore.get(person.localId))?.household_id).toBeNull();
+    expect(await syncQueueStore.list()).toEqual([]);
   });
 });

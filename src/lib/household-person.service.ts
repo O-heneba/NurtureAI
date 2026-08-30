@@ -105,6 +105,16 @@ async function cachePersons(rows: any[]): Promise<void> {
   }
 }
 
+async function assertHouseholdExists(householdId: string | null | undefined): Promise<void> {
+  if (!householdId) return;
+  const local = (await householdStore.get(householdId)) ?? (await householdStore.getByRemoteId(householdId));
+  if (local) return;
+  if (!browser()) return;
+  const { data, error } = await remote.from("households").select("id").eq("id", householdId).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error(`Household ${householdId} does not exist`);
+}
+
 export async function listWorkflowHouseholds(): Promise<HouseholdWorkflowRow[]> {
   if (!browser()) return listRemoteHouseholds();
   const local = await householdStore.list();
@@ -235,6 +245,7 @@ export async function createWorkflowPerson(input: {
   draft?: boolean;
 }): Promise<PersonWorkflowRow> {
   if (!browser()) throw new Error("Person creation requires a browser");
+  await assertHouseholdExists(input.household_id ?? null);
   const created_by = await currentUserId();
   const record = await personStore.create({ ...input, created_by });
   await queueCreate("persons", record);
@@ -261,6 +272,8 @@ export async function updateWorkflowPerson(
   if (!browser()) throw new Error("Person editing requires a browser");
   const existing = (await personStore.get(id)) ?? (await personStore.getByRemoteId(id));
   if (!existing) throw new Error("Person not found locally");
+  const nextHouseholdId = updates.household_id ?? existing.household_id ?? null;
+  await assertHouseholdExists(nextHouseholdId);
   const updated = await personStore.update(existing.localId, updates);
   if (!updated) throw new Error("Person could not be updated");
   await queueUpdate("persons", updated);

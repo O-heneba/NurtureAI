@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { deriveChildHealthRows } from "@/lib/child-health";
 import { childProfileStore, communityStore, householdStore, pregnancyStore, personStore } from "@/lib/storage/local-store";
 import { db as localDb } from "@/lib/storage/db";
 import { createAndQueue, currentUserId, isBrowser, isOffline, localRow, updateAndQueue } from "@/lib/storage/local-first";
@@ -9,13 +10,54 @@ const db = supabase as unknown as {
   auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> };
 };
 
+function isLegacyDistrictCommunity(row: {
+  name: string;
+  district?: string | null;
+  community_code?: string | null;
+}) {
+  const districtCode = (row.district ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+  return Boolean(
+    districtCode &&
+      (row.community_code === districtCode ||
+        row.name.trim().toLowerCase() === row.district?.trim().toLowerCase()),
+  );
+}
+
+function communityIdentity(row: {
+  name: string;
+  district?: string | null;
+  region?: string | null;
+}) {
+  return [row.name, row.district, row.region]
+    .map((value) => (value ?? "").trim().toLowerCase())
+    .join("::");
+}
+
+function uniqueCommunities<T extends { name: string; district?: string | null; region?: string | null }>(rows: T[]) {
+  return Array.from(new Map(rows.map((row) => [communityIdentity(row), row])).values());
+}
+
 async function uid(): Promise<string> {
   const { data } = await db.auth.getUser();
   if (!data.user) throw new Error("Not signed in");
   return data.user.id;
 }
 
-export async function listCommunities(): Promise<Array<{ id: string; name: string }>> {
+export async function listCommunities(): Promise<
+  Array<{
+    id: string;
+    name: string;
+    district: string | null;
+    region: string | null;
+    sub_district: string | null;
+    chps_zone: string | null;
+    status: string | null;
+  }>
+> {
   if (isBrowser()) {
     const local = await communityStore.list();
     if (!isOffline()) {
@@ -42,13 +84,32 @@ export async function listCommunities(): Promise<Array<{ id: string; name: strin
         // Keep locally persisted communities when the remote refresh is unavailable.
       }
     }
-    return (await communityStore.list())
-      .filter((row) => row.syncStatus !== "deleted")
-      .map((row) => ({ id: row.remoteId ?? row.localId, name: row.name }));
+    return uniqueCommunities(
+      (await communityStore.list()).filter(
+        (row) => row.syncStatus !== "deleted" && !isLegacyDistrictCommunity(row),
+      ),
+    )
+      .map((row) => ({
+        id: row.remoteId ?? row.localId,
+        name: row.name,
+        district: row.district ?? null,
+        region: row.region ?? null,
+        sub_district: row.sub_district ?? null,
+        chps_zone: row.chps_zone ?? null,
+        status: row.status ?? null,
+      }));
   }
-  const { data, error } = await db.from("communities").select("id, name").order("name");
+  const { data, error } = await db
+    .from("communities")
+    .select("id, name, community_code, district, region, sub_district, chps_zone, status")
+    .order("name");
   if (error) throw error;
-  return data ?? [];
+  return uniqueCommunities(
+    (data ?? []).filter(
+      (row: { name: string; district?: string | null; community_code?: string | null }) =>
+        !isLegacyDistrictCommunity(row),
+    ),
+  );
 }
 
 export async function listHouseholds(): Promise<
@@ -107,22 +168,34 @@ export async function listPersonsFull(): Promise<any[]> {
 }
 
 export async function listPersonsByIds(ids: string[]): Promise<any[]> {
-  if (ids.length === 0) return [];
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) return [];
+
   if (isBrowser()) {
-    const local = (await personStore.list()).filter((row) => ids.includes(row.localId) || (row.remoteId ? ids.includes(row.remoteId) : false));
-    if (isOffline() || local.length >= ids.length) {
-      return local.filter((row) => row.syncStatus !== "deleted").map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId }));
-    }
-    const { data, error } = await db.from("persons").select("*").in("id", ids);
-    if (!error) {
-      const localRemoteIds = new Set(local.map((row) => row.remoteId ?? row.localId));
-      return [
-        ...local.filter((row) => row.syncStatus !== "deleted").map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId })),
-        ...(data ?? []).filter((row: any) => !localRemoteIds.has(row.id)),
-      ];
-    }
+    const local = (await personStore.list()).filter(
+      (row) => uniqueIds.includes(row.localId) || (row.remoteId ? uniqueIds.includes(row.remoteId) : false),
+    );
+    const localMapped = local.filter((row) => row.syncStatus !== "deleted").map((row) => ({ ...localRow(row), id: row.remoteId ?? row.localId }));
+
+    if (isOffline()) return localMapped;
+
+    const remoteIds = uniqueIds.filter(
+      (id) => !localMapped.some((row) => row.id === id || row.localId === id || row.remoteId === id),
+    );
+
+    if (remoteIds.length === 0) return localMapped;
+
+    const { data, error } = await db.from("persons").select("*").in("id", remoteIds);
+    if (error) return localMapped;
+
+    const seen = new Set(localMapped.map((row) => row.id));
+    return [
+      ...localMapped,
+      ...(data ?? []).filter((row: any) => !seen.has(row.id)).map((row: any) => ({ ...row, id: row.id })),
+    ];
   }
-  const { data, error } = await db.from("persons").select("*").in("id", ids);
+
+  const { data, error } = await db.from("persons").select("*").in("id", uniqueIds);
   if (error) throw error;
   return data ?? [];
 }
@@ -416,6 +489,8 @@ export async function listChildProfiles(): Promise<
 > {
   if (isBrowser()) {
     const local = await childProfileStore.list();
+    const localRows = local.filter((row) => row.syncStatus !== "deleted").map(localRow) as any[];
+
     if (!isOffline()) {
       try {
         const { data, error } = await db
@@ -423,6 +498,7 @@ export async function listChildProfiles(): Promise<
           .select("id, person_id, mother_person_id, birth_weight_kg, immunizations, growth_notes, created_at")
           .order("created_at", { ascending: false })
           .limit(200);
+
         if (!error) {
           for (const row of data ?? []) {
             const existing = await childProfileStore.getByRemoteId(row.id);
@@ -444,9 +520,21 @@ export async function listChildProfiles(): Promise<
         // Keep locally persisted child records when the remote refresh is unavailable.
       }
     }
+
     const refreshed = await childProfileStore.list();
-    if (refreshed.length || isOffline()) return refreshed.filter((row) => row.syncStatus !== "deleted").map(localRow) as any;
+    const refreshedRows = refreshed.filter((row) => row.syncStatus !== "deleted").map(localRow) as any[];
+    const personRows = (await personStore.list())
+      .filter((row) => row.syncStatus !== "deleted")
+      .map((row) => ({
+        id: row.remoteId ?? row.localId,
+        profile_types: row.profile_types ?? [],
+        createdAt: row.createdAt ?? row.updatedAt ?? new Date().toISOString(),
+      }));
+
+    const merged = deriveChildHealthRows(refreshedRows, personRows);
+    if (merged.length > 0 || isOffline()) return merged;
   }
+
   const { data, error } = await db
     .from("child_profiles")
     .select(
@@ -469,6 +557,24 @@ export async function listHouseholdsByCommunity(communityId: string): Promise<
     notes: string | null;
   }>
 > {
+  if (isBrowser()) {
+    const local = (await householdStore.list()).filter(
+      (row) => row.syncStatus !== "deleted" && row.community_id === communityId,
+    );
+    if (local.length || isOffline()) {
+      return local
+        .map((row) => ({
+          ...localRow(row),
+          id: row.remoteId ?? row.localId,
+          phone: row.phone ?? null,
+          address: row.address ?? null,
+          community_id: row.community_id ?? null,
+          notes: row.notes ?? null,
+        }))
+        .sort((a, b) => String(a.head_name).localeCompare(String(b.head_name)));
+    }
+  }
+
   const { data, error } = await db
     .from("households")
     .select("id, head_name, house_no, phone, address, community_id, notes")

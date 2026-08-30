@@ -169,6 +169,10 @@ function cleanPayload(record: LocalEntity, includeId: boolean): Record<string, u
     const match = payload.date_of_birth.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (match) payload.date_of_birth = `${match[3]}-${match[2]}-${match[1]}`;
   }
+  if (recordType(record) === "referral_status_history") {
+    delete payload.created_at;
+    delete payload.updated_at;
+  }
   if (recordType(record) === "follow_up_attempts" || recordType(record) === "follow_up_outcomes") {
     delete payload.created_at;
     delete payload.updated_at;
@@ -197,6 +201,7 @@ function recordType(record: LocalEntity): SyncEntityType {
     if ("contact_status" in record) return "follow_up_outcomes";
     return "follow_up_attempts";
   }
+  if ("referral_id" in record && "to_status" in record && "at" in record) return "referral_status_history";
   if ("full_name" in record) return "persons";
   if ("community_code" in record) return "communities";
   if ("head_name" in record) return "households";
@@ -217,7 +222,12 @@ async function resolveForeignKeys(
     if (typeof value !== "string") continue;
     const parentTable = (db as unknown as Record<string, LocalTable>)[relation.table];
     const parent = await parentTable.get(value) ?? await parentTable.where?.("remoteId").equals(value).first();
-    if (!parent) continue;
+    if (!parent) {
+      if (entityType === "persons" && relation.field === "household_id") {
+        resolved[relation.field] = null;
+      }
+      continue;
+    }
     if (!parent.remoteId) {
       throw new DependencyPendingError(
         `${entityType}.${relation.field} is waiting for ${relation.table}/${value}`,
@@ -372,6 +382,16 @@ async function performOperation(operation: SyncQueueOperation, client: SupabaseC
     operation.entityType,
     cleanPayload(record, operation.operationType === "create"),
   );
+  if (operation.entityType === "persons" && payload.household_id === null && record.household_id && !record.household_id.startsWith("remote-")) {
+    await tableFor(operation.entityType).put({
+      ...record,
+      household_id: null,
+      updatedAt: new Date().toISOString(),
+      syncStatus: "pending",
+      syncError: null,
+      version: record.version + 1,
+    } as LocalEntity);
+  }
   const ownerTables = new Set([
     "communities",
     "households",
@@ -414,7 +434,19 @@ async function performOperation(operation: SyncQueueOperation, client: SupabaseC
     return;
   }
 
-  if (!remoteId) throw new Error(`Cannot update without remote ID: ${operation.entityType}/${operation.localId}`);
+  if (!remoteId) {
+    if (operation.entityType === "persons" && payload.household_id === null) {
+      await updateRecordStatus(operation, {
+        household_id: null,
+        syncStatus: "synced",
+        lastSyncedAt: new Date().toISOString(),
+        syncError: null,
+      });
+      await syncQueueStore.delete(operation.id);
+      return;
+    }
+    throw new Error(`Cannot update without remote ID: ${operation.entityType}/${operation.localId}`);
+  }
   if (record.lastSyncedAt) {
     const remote = await table.select("*").eq("id", remoteId).maybeSingle();
     if (remote.error) throw remote.error;

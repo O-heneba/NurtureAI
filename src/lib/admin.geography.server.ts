@@ -227,3 +227,36 @@ export async function seedGeographyFromJson(data: Array<any>) {
 
   return added;
 }
+
+export async function seedCommunitiesFromJson(data: Array<any>) {
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from("communities")
+    .select("id, community_code");
+  if (existingError) throw existingError;
+
+  const existingCodes = new Set(
+    (existing ?? []).map((row) => String(row.community_code ?? "").trim()).filter(Boolean),
+  );
+  let added = 0;
+
+  for (const row of data) {
+    const communityCode = String(row.community_code ?? "").trim();
+    if (!communityCode || existingCodes.has(communityCode)) continue;
+    const { error } = await supabaseAdmin.from("communities").insert({
+      name: row.name,
+      community_code: communityCode,
+      region: row.region ?? null,
+      district: row.district ?? null,
+      sub_district: row.sub_district ?? null,
+      gps_lat: row.gps_lat ?? null,
+      gps_lng: row.gps_lng ?? null,
+      location_desc: row.location_desc ?? null,
+      status: row.status ?? "active",
+    });
+    if (error) throw error;
+    existingCodes.add(communityCode);
+    added += 1;
+  }
+
+  return added;
+}

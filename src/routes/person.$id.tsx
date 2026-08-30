@@ -1,13 +1,14 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { EmptyState, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, Baby, Calendar, ClipboardCheck, FileText, HeartPulse, Save, Send, User } from "lucide-react";
-import { getWorkflowHousehold, getWorkflowPerson, updateWorkflowPerson } from "@/lib/household-person.service";
+import { getWorkflowHousehold, getWorkflowPerson, listWorkflowHouseholds, updateWorkflowPerson } from "@/lib/household-person.service";
 import { listChildProfiles, listPregnanciesForPerson } from "@/lib/registrations";
 import { listAssessmentsForPerson } from "@/lib/assessments";
 import { listReferrals } from "@/lib/referrals";
@@ -52,9 +53,16 @@ export const Route = createFileRoute("/person/$id")({
 function PersonDetail() {
   const { person: initial, household, pregnancies, childProfiles, assessments, referrals, followUps, notes } = Route.useLoaderData();
   const [person, setPerson] = useState(initial);
+  const [households, setHouseholds] = useState<Array<{ id: string; head_name: string; house_no: string }>>([]);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    listWorkflowHouseholds()
+      .then(setHouseholds)
+      .catch(() => setHouseholds([]));
+  }, []);
 
   async function save() {
     setSaving(true);
@@ -64,6 +72,7 @@ function PersonDetail() {
         phone: person.phone,
         national_id: person.national_id,
         notes: person.notes,
+        household_id: person.household_id ?? null,
       });
       setPerson(saved);
       setEditing(false);
@@ -97,7 +106,28 @@ function PersonDetail() {
           <label className="text-sm">Full name<Input disabled={!editing} value={person.full_name} onChange={(event) => setPerson({ ...person, full_name: event.target.value })} /></label>
           <label className="text-sm">Phone<Input disabled={!editing} value={person.phone ?? ""} onChange={(event) => setPerson({ ...person, phone: event.target.value })} /></label>
           <label className="text-sm">National ID<Input disabled={!editing} value={person.national_id ?? ""} onChange={(event) => setPerson({ ...person, national_id: event.target.value })} /></label>
-          <div className="text-sm">Household{household ? <Link className="block text-primary hover:underline" to="/household/$id" params={{ id: household.id }}>{household.head_name}</Link> : <span className="block text-muted-foreground">Not recorded</span>}</div>
+          <div className="text-sm">
+            Household
+            {editing ? (
+              <Select value={person.household_id ?? "unassigned"} onValueChange={(value) => setPerson({ ...person, household_id: value === "unassigned" ? null : value })}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select household" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Not assigned</SelectItem>
+                  {households.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.head_name} ({item.house_no})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : household ? (
+              <Link className="block text-primary hover:underline" to="/household/$id" params={{ id: household.id }}>{household.head_name}</Link>
+            ) : (
+              <span className="block text-muted-foreground">Not recorded</span>
+            )}
+          </div>
           <div className="text-sm"><span className="text-muted-foreground">Sex</span><div className="font-medium">{person.sex === "F" ? "Female" : person.sex === "M" ? "Male" : "Not recorded"}</div></div>
           <div className="text-sm"><span className="text-muted-foreground">Date of birth</span><div className="font-medium">{person.date_of_birth ?? "Not recorded"}</div></div>
           <div className="text-sm"><span className="text-muted-foreground">Profile type</span><div className="font-medium">{person.profile_types?.[0] ?? "Not recorded"}</div></div>

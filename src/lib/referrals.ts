@@ -214,8 +214,7 @@ export async function createReferral(v: {
     from_status: null,
     to_status: status,
     actor,
-    note: v.submit ? "Referral submitted" : "Referral drafted",
-  });
+    note: v.submit ? "Referral submitted" : "Referral drafted",    at: now,  });
   return data as ReferralRow;
 }
 
@@ -259,6 +258,7 @@ export async function updateReferralStatus(
     to_status: to,
     actor,
     note: note ?? null,
+    at: now,
   });
   return data as ReferralRow;
 }

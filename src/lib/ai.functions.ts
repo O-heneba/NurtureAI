@@ -2,29 +2,55 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { preserveRulesPriority } from "./ai-safety";
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const DEFAULT_MODEL = "google/gemini-2.5-flash";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
-async function callGateway(body: Record<string, unknown>) {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY not configured");
-  const res = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
+type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+
+async function callGemini(body: {
+  model: string;
+  messages: ChatMessage[];
+  response_format?: { type: string };
+}) {
+  const key = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GEMINI_API_KEY;
+  if (!key)
+    throw new Error(
+      "GEMINI_API_KEY not configured. Add a Google AI Studio API key to the server environment.",
+    );
+  const systemMessage = body.messages.find((message) => message.role === "system");
+  const contents = body.messages
+    .filter((message) => message.role !== "system")
+    .map((message) => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: message.content }],
+    }));
+  const res = await fetch(
+    `${GEMINI_API_URL}/${body.model}:generateContent?key=${encodeURIComponent(key)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(systemMessage
+          ? { systemInstruction: { parts: [{ text: systemMessage.content }] } }
+          : {}),
+        contents,
+        generationConfig:
+          body.response_format?.type === "json_object"
+            ? { responseMimeType: "application/json" }
+            : undefined,
+      }),
     },
-    body: JSON.stringify(body),
-  });
+  );
   if (res.status === 429) throw new Error("AI rate limit reached — please try again shortly.");
-  if (res.status === 402)
-    throw new Error("AI credits exhausted. Add credits in your workspace to continue.");
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`AI request failed (${res.status}): ${t.slice(0, 200)}`);
+    throw new Error(`Gemini request failed (${res.status}): ${t.slice(0, 300)}`);
   }
-  return (await res.json()) as {
-    choices: Array<{ message: { content: string } }>;
+  const result = (await res.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+  return {
+    choices: [{ message: { content: result.candidates?.[0]?.content?.parts?.[0]?.text ?? "" } }],
   };
 }
 
@@ -71,7 +97,7 @@ export const assessRisk = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => AssessInput.parse(input))
   .handler(async ({ data }) => {
     const userPrompt = `Analyze this CHPS field assessment and return the JSON described.\n\n${JSON.stringify(data, null, 2)}`;
-    const resp = await callGateway({
+    const resp = await callGemini({
       model: DEFAULT_MODEL,
       messages: [
         { role: "system", content: AI_ASSESS_SYSTEM },
@@ -103,6 +129,25 @@ const ChatInput = z.object({
     .max(50),
 });
 
+const GenerateInput = z.object({
+  messages: z
+    .array(z.object({ role: z.enum(["system", "user", "assistant"]), content: z.string() }))
+    .min(1)
+    .max(50),
+  responseFormat: z.enum(["text", "json"]).default("text"),
+});
+
+export const generateAI = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => GenerateInput.parse(input))
+  .handler(async ({ data }) => {
+    const response = await callGemini({
+      model: DEFAULT_MODEL,
+      messages: data.messages,
+      response_format: data.responseFormat === "json" ? { type: "json_object" } : undefined,
+    });
+    return { reply: response.choices?.[0]?.message?.content ?? "" };
+  });
+
 const NUTRITION_SYSTEM = `You are NurtureAI's Nutrition Assistant for CHPS community health workers in Ghana.
 - Give practical, culturally-appropriate advice using locally available Ghanaian foods (banku, kenkey, kontomire, groundnut, kokonte, dawadawa, tilapia, etc.).
 - Cover pregnancy nutrition, breastfeeding, complementary feeding, child nutrition, and common deficiencies (iron, iodine, vitamin A).
@@ -113,7 +158,7 @@ const NUTRITION_SYSTEM = `You are NurtureAI's Nutrition Assistant for CHPS commu
 export const nutritionChat = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ChatInput.parse(input))
   .handler(async ({ data }) => {
-    const resp = await callGateway({
+    const resp = await callGemini({
       model: DEFAULT_MODEL,
       messages: [{ role: "system", content: NUTRITION_SYSTEM }, ...data.messages],
     });
@@ -173,7 +218,7 @@ export const analyzeAssessment = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => AnalyzeInput.parse(input))
   .handler(async ({ data }) => {
     const userPrompt = `Analyse the following structured community-health assessment and return the JSON described.\n\n${JSON.stringify(data, null, 2)}`;
-    const resp = await callGateway({
+    const resp = await callGemini({
       model: DEFAULT_MODEL,
       messages: [
         { role: "system", content: ANALYZE_SYSTEM },

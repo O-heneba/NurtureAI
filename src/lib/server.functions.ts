@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import bundledCommunities from "../../data/northern-ghana-community-records.json";
 
 type AuthServerContext = {
   supabase: typeof supabaseAdmin;
@@ -32,10 +33,56 @@ async function requireAdministrator(supabase: AuthServerContext["supabase"]) {
   if (!data) throw new Error("Unauthorized: administrator role required");
 }
 
-export const fetchCommunities = createServerFn({ method: "GET" }).handler(async () => {
-  const { data, error } = await supabaseAdmin.from("communities").select("*").order("name");
-  if (error) throw error;
-  return data ?? [];
+type CommunityListRow = {
+  id?: string;
+  name?: string;
+  district?: string | null;
+  region?: string | null;
+  community_code?: string | null;
+  sub_district?: string | null;
+  chps_zone?: string | null;
+  status?: string | null;
+};
+
+export function sanitizeCommunityRecords(
+  rows: CommunityListRow[] = [],
+  fallbackRows: CommunityListRow[] = [],
+): CommunityListRow[] {
+  const source = rows.length > 0 ? rows : fallbackRows;
+  const seen = new Set<string>();
+
+  return source.filter((row) => {
+    const name = String(row.name ?? "").trim();
+    const district = String(row.district ?? "").trim();
+    const region = String(row.region ?? "").trim();
+    const communityCode = String(row.community_code ?? "").trim();
+
+    if (!name) return false;
+
+    const districtCode = district
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_|_$/g, "");
+    const isLegacy =
+      districtCode &&
+      (communityCode === districtCode || name.toLowerCase() === district.toLowerCase());
+
+    if (isLegacy) return false;
+
+    const identity = [name, district, region, communityCode]
+      .map((value) => String(value ?? "").trim().toLowerCase())
+      .join("::");
+
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+}
+
+export const fetchCommunities = authProtectedGet.handler(async ({ context }) => {
+  const { data, error } = await context.supabase.from("communities").select("*").order("name");
+  const rows = error ? [] : (data ?? []);
+  return sanitizeCommunityRecords(rows as CommunityListRow[], bundledCommunities as CommunityListRow[]);
 });
 
 export const fetchCommunityById = createServerFn({ method: "GET" })
@@ -195,6 +242,14 @@ export const seedGeography = authProtected.handler(async ({ context }) => {
   const admin = await import("./admin.geography.server");
   const geoCommunities = (await import("../../data/northern-ghana-communities.json")).default as Array<any>;
   return admin.seedGeographyFromJson(geoCommunities);
+});
+
+export const seedCommunities = authProtected.handler(async ({ context }) => {
+  const supabase = context.supabase as AuthServerContext["supabase"];
+  await requireAdministrator(supabase);
+  const admin = await import("./admin.geography.server");
+  const communities = (await import("../../data/northern-ghana-community-records.json")).default as Array<any>;
+  return admin.seedCommunitiesFromJson(communities);
 });
 
 export const listProfilesWithRoles = authProtectedGet.handler(async ({ context }) => {
