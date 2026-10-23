@@ -16,9 +16,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Baby, CheckCircle2, Loader2, Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { insertChild, insertPerson, listHouseholds, listPersons } from "@/lib/registrations";
+import { insertChild, insertPerson, listChildProfiles, listHouseholds, listPersons } from "@/lib/registrations";
+import { childProfileStore, personStore } from "@/lib/storage/local-store";
+import { syncManager } from "@/lib/storage/sync-manager";
+import {
+  getImmunizationScheduleForAge,
+  recordVaccination,
+  useImmunizationSchedule,
+} from "@/lib/immunization";
 
 export const Route = createFileRoute("/register/child")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -32,14 +39,6 @@ export const Route = createFileRoute("/register/child")({
 });
 
 const milestones = ["Head control", "Sitting", "Crawling", "Standing", "Walking", "First words"];
-const immSchedule = [
-  "BCG + OPV0",
-  "Penta 1",
-  "Penta 2",
-  "Penta 3",
-  "Measles 1",
-  "MMR + Yellow fever",
-];
 
 function RegisterChild() {
   const nav = useNavigate();
@@ -52,8 +51,9 @@ function RegisterChild() {
     nutrition: "Normal",
     bf: "Exclusive",
     existingPersonId: person_id ?? "",
+    mother: "none",
     name: person_name ?? "",
-    sex: person_sex ?? "",
+    sex: person_sex ?? "unknown",
     dob: person_dob ?? "",
     household: household_id ?? "",
   });
@@ -61,14 +61,32 @@ function RegisterChild() {
   const [guardianPhone, setGuardianPhone] = useState("");
   const [guardianRole, setGuardianRole] = useState("mother");
   const [ms, setMs] = useState<string[]>([]);
-  const [imm, setImm] = useState<string[]>([]);
+  const [historyChoice, setHistoryChoice] = useState<"yes" | "no" | "unknown">("no");
+  const [immunizationHistory, setImmunizationHistory] = useState<
+    Record<string, { date: string; notes: string }>
+  >({});
   const [households, setHouseholds] = useState<
     Array<{ id: string; head_name: string; house_no: string }>
   >([]);
   const [mothers, setMothers] = useState<
     Array<{ id: string; full_name: string; sex: string | null }>
   >([]);
+  const { schedule } = useImmunizationSchedule();
   const s = (k: string, val: string) => setV({ ...v, [k]: val });
+  const relevantSchedule = useMemo(() => {
+    if (!v.dob) return [];
+    return getImmunizationScheduleForAge({ dob: v.dob, schedule });
+  }, [v.dob, schedule]);
+
+  const milestoneGroups = useMemo(() => {
+    const groups: Record<string, typeof relevantSchedule> = {};
+    for (const item of relevantSchedule) {
+      const label = item.milestone_label || "Later milestones";
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(item);
+    }
+    return groups;
+  }, [relevantSchedule]);
 
   useEffect(() => {
     listHouseholds()
@@ -81,6 +99,17 @@ function RegisterChild() {
 
   function toggle(list: string[], setList: (v: string[]) => void, val: string) {
     setList(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
+  }
+
+  function setHistoryItem(vaccineId: string, updates: Partial<{ date: string; notes: string }>) {
+    setImmunizationHistory((current) => ({
+      ...current,
+      [vaccineId]: {
+        date: current[vaccineId]?.date ?? (v.dob ? parseDisplayDate(v.dob) : ""),
+        notes: current[vaccineId]?.notes ?? "",
+        ...updates,
+      },
+    }));
   }
 
   async function submit() {
@@ -97,16 +126,33 @@ function RegisterChild() {
       return;
     }
     setSaving(true);
+    let createdPersonId: string | null = null;
+    let createdGuardianId: string | null = null;
+    let createdChildId: string | null = null;
     try {
+      const existingPeople = await listPersons();
+      const existingPerson = existingPeople.find(
+        (candidate) =>
+          candidate.full_name.trim().toLowerCase() === v.name.trim().toLowerCase() &&
+          candidate.household_id === v.household &&
+          candidate.date_of_birth === parseDisplayDate(v.dob),
+      );
       const person = v.existingPersonId
         ? { id: v.existingPersonId }
-        : await insertPerson({
+        : existingPerson
+          ? { id: existingPerson.id }
+          : await insertPerson({
             household_id: v.household,
             full_name: v.name,
             sex: v.sex || undefined,
             date_of_birth: parseDisplayDate(v.dob),
             notes: v.notes || undefined,
           });
+      if (!v.existingPersonId && !existingPerson) createdPersonId = person.id;
+      const existingChildren = await listChildProfiles();
+      const personRecord = await personStore.get(person.id);
+      const personIds = new Set([person.id, personRecord?.localId, personRecord?.remoteId].filter(Boolean));
+      const existingChild = existingChildren.find((candidate) => personIds.has(candidate.person_id));
       const guardian = guardianName.trim()
         ? await insertPerson({
             household_id: v.household,
@@ -115,27 +161,65 @@ function RegisterChild() {
             phone: guardianPhone.trim() || undefined,
           })
         : null;
+      if (guardian) createdGuardianId = guardian.id;
       const growthNotes = [
         v.cw && `Current weight: ${v.cw}kg`,
         v.h && `Height: ${v.h}cm`,
         `Nutrition: ${v.nutrition}`,
         `Breastfeeding: ${v.bf}`,
-        v.imm && `Immunization: ${v.imm}`,
         ms.length && `Milestones: ${ms.join(", ")}`,
         v.notes && `Notes: ${v.notes}`,
       ]
         .filter(Boolean)
         .join(" | ");
-      await insertChild({
-        person_id: person.id,
-        mother_person_id: v.mother || guardian?.id || undefined,
-        birth_weight_kg: v.bw ? Number(v.bw) : undefined,
-        immunizations: imm,
-        growth_notes: growthNotes,
-      });
+
+      const child = existingChild
+        ? { id: existingChild.id }
+        : await insertChild({
+            person_id: person.id,
+            mother_person_id: v.mother || guardian?.id || undefined,
+            birth_weight_kg: v.bw ? Number(v.bw) : undefined,
+            immunizations: [],
+            growth_notes: growthNotes,
+          });
+      if (!existingChild) createdChildId = child.id;
+
+      if (historyChoice === "yes") {
+        try {
+          await syncManager.syncNow();
+          const syncedChild = await childProfileStore.get(child.id);
+          const childId = syncedChild?.remoteId ?? child.id;
+          if (!syncedChild?.remoteId) {
+            throw new Error("Child saved locally, but immunization history is waiting for synchronization.");
+          }
+          const selected = schedule.filter((item) => immunizationHistory[item.id]);
+          for (const vaccine of selected) {
+            const record = immunizationHistory[vaccine.id];
+            await recordVaccination({
+              child_id: childId,
+              schedule_id: vaccine.id,
+              vaccine_code: vaccine.vaccine_code,
+              administered_date: record?.date || parseDisplayDate(v.dob),
+              source: "registration_history",
+              notes: record?.notes || undefined,
+              created_by: undefined,
+            });
+          }
+        } catch (historyError) {
+          toast.warning(
+            historyError instanceof Error
+              ? `Child saved, but immunization history was not recorded: ${historyError.message}`
+              : "Child saved, but immunization history was not recorded.",
+          );
+        }
+      }
+
       setDone(true);
       toast.success("Child registered");
     } catch (e) {
+      if (createdChildId) await childProfileStore.delete(createdChildId).catch(() => undefined);
+      if (createdGuardianId) await personStore.delete(createdGuardianId).catch(() => undefined);
+      if (createdPersonId) await personStore.delete(createdPersonId).catch(() => undefined);
       toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSaving(false);
@@ -163,7 +247,8 @@ function RegisterChild() {
                   setDone(false);
                   setV({ nutrition: "Normal", bf: "Exclusive" });
                   setMs([]);
-                  setImm([]);
+                  setImmunizationHistory({});
+                  setHistoryChoice("no");
                 }}
               >
                 Register another
@@ -217,11 +302,12 @@ function RegisterChild() {
               </Select>
             </Field>
             <Field label="Mother or father/guardian (optional)">
-              <Select value={v.mother} onValueChange={(x) => s("mother", x)}>
+              <Select value={v.mother || "none"} onValueChange={(x) => s("mother", x === "none" ? "" : x)}>
                 <SelectTrigger>
                   <SelectValue placeholder={mothers.length ? "Select mother" : "Loading…"} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Not recorded</SelectItem>
                   {mothers.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.full_name}
@@ -279,11 +365,12 @@ function RegisterChild() {
               </div>
             </Field>
             <Field label="Sex">
-              <Select value={v.sex} onValueChange={(x) => s("sex", x)}>
+              <Select value={v.sex || "unknown"} onValueChange={(x) => s("sex", x === "unknown" ? "" : x)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="unknown">Not recorded</SelectItem>
                   <SelectItem value="F">Female</SelectItem>
                   <SelectItem value="M">Male</SelectItem>
                 </SelectContent>
@@ -336,20 +423,6 @@ function RegisterChild() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Immunization status">
-              <Select value={v.imm} onValueChange={(x) => s("imm", x)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {["Up-to-date", "Due: MMR", "Due: Measles", "Delayed"].map((n) => (
-                    <SelectItem key={n} value={n}>
-                      {n}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
           </div>
 
           <div>
@@ -368,21 +441,84 @@ function RegisterChild() {
           </div>
 
           <div>
-            <Label className="mb-2 block">Immunizations received</Label>
-            <div className="grid sm:grid-cols-2 gap-2">
-              {immSchedule.map((m) => (
-                <label
-                  key={m}
-                  className="flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/40"
+            <Label className="mb-2 block">Previous Immunization History</Label>
+            <div className="mb-3 flex flex-wrap gap-2">
+              {(["yes", "no", "unknown"] as const).map((option) => (
+                <Button
+                  key={option}
+                  type="button"
+                  variant={historyChoice === option ? "default" : "outline"}
+                  className="rounded-full"
+                  onClick={() => setHistoryChoice(option)}
                 >
-                  <Checkbox
-                    checked={imm.includes(m)}
-                    onCheckedChange={() => toggle(imm, setImm, m)}
-                  />
-                  <span className="text-sm">{m}</span>
-                </label>
+                  {option === "yes" ? "Yes" : option === "no" ? "No" : "Unknown"}
+                </Button>
               ))}
             </div>
+
+            {historyChoice === "yes" && (
+              <div className="space-y-4">
+                {relevantSchedule.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No age-appropriate immunizations are available for this child yet.
+                  </p>
+                )}
+
+                {Object.entries(milestoneGroups).map(([groupLabel, groupItems]) => (
+                  <div key={groupLabel} className="rounded-xl border p-3">
+                    <div className="mb-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                      {groupLabel}
+                    </div>
+                    <div className="space-y-3">
+                      {groupItems.map((vaccine) => {
+                        const entry = immunizationHistory[vaccine.id] ?? {
+                          date: parseDisplayDate(v.dob ?? ""),
+                          notes: "",
+                        };
+                        return (
+                          <div
+                            key={vaccine.id}
+                            className="rounded-lg border bg-background p-3"
+                          >
+                            <div className="mb-2 flex items-center gap-3">
+                              <Checkbox
+                                checked={Boolean(immunizationHistory[vaccine.id])}
+                                onCheckedChange={(checked) => {
+                                  if (checked === true) {
+                                    setHistoryItem(vaccine.id, { date: entry.date || parseDisplayDate(v.dob ?? "") });
+                                  } else {
+                                    setImmunizationHistory((current) => {
+                                      const next = { ...current };
+                                      delete next[vaccine.id];
+                                      return next;
+                                    });
+                                  }
+                                }}
+                              />
+                              <span className="text-sm font-medium">{vaccine.display_name}</span>
+                            </div>
+                            {immunizationHistory[vaccine.id] && (
+                              <div className="grid gap-2 sm:grid-cols-[180px_1fr]">
+                                <Input
+                                  type="date"
+                                  value={entry.date ?? ""}
+                                  onChange={(e) => setHistoryItem(vaccine.id, { date: e.target.value })}
+                                />
+                                <Input
+                                  value={entry.notes ?? ""}
+                                  onChange={(e) => setHistoryItem(vaccine.id, { notes: e.target.value })}
+                                  placeholder="Optional notes"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <Field label="Medical notes">

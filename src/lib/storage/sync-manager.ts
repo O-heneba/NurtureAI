@@ -382,7 +382,15 @@ async function performOperation(operation: SyncQueueOperation, client: SupabaseC
     operation.entityType,
     cleanPayload(record, operation.operationType === "create"),
   );
-  if (operation.entityType === "persons" && payload.household_id === null && record.household_id && !record.household_id.startsWith("remote-")) {
+  const householdId = "household_id" in record ? (record as { household_id?: string | null }).household_id : undefined;
+  if (
+    operation.entityType === "persons" &&
+    "household_id" in payload &&
+    payload.household_id === null &&
+    typeof householdId === "string" &&
+    householdId &&
+    !householdId.startsWith("remote-")
+  ) {
     await tableFor(operation.entityType).put({
       ...record,
       household_id: null,

@@ -170,6 +170,23 @@ describe("AI service contract", () => {
     expect(service.getState()).toMatchObject({ provider: "cloud", modelId: "server-model" });
   });
 
+  it("preserves actual model metadata returned by the cloud server response", async () => {
+    const cloud = provider({
+      kind: "cloud",
+      modelId: "gemini-2.5-flash",
+      generate: vi.fn(async () => ({
+        text: "fallback response",
+        provider: "cloud" as const,
+        modelId: "llama-3.1-8b-instant",
+      })),
+    });
+
+    const response = await cloud.generate({ prompt: "hello" });
+
+    expect(response.modelId).toBe("llama-3.1-8b-instant");
+    expect(response.text).toBe("fallback response");
+  });
+
   it("preserves provider errors for user-facing handling", async () => {
     const failure = new AIError("generation-failed", "Generation failed");
     const selected = provider({ generate: vi.fn(async () => Promise.reject(failure)) });

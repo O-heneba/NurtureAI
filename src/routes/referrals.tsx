@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader, EmptyState, StatusPill } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,14 +13,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Send, MapPin, Calendar, Search, Loader2 } from "lucide-react";
+import { Plus, Send, MapPin, Calendar, Search, Loader2, Clock3, UserRound } from "lucide-react";
 import {
   listReferrals,
   type ReferralRow,
   type ReferralStatus,
   type Urgency,
 } from "@/lib/referrals";
+import { listCommunities, listHouseholds, listPersons } from "@/lib/registrations";
 import { toast } from "sonner";
+
+type ReferralListItem = ReferralRow & {
+  personName: string;
+  communityName: string;
+};
 
 export const Route = createFileRoute("/referrals")({
   component: Referrals,
@@ -46,29 +52,115 @@ const STATUS_TONE: Record<string, "success" | "info" | "warning" | "destructive"
 };
 
 function Referrals() {
-  const [rows, setRows] = useState<ReferralRow[] | null>(null);
+  const [rows, setRows] = useState<ReferralListItem[] | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<ReferralStatus | "all">("all");
   const [urgency, setUrgency] = useState<Urgency | "all">("all");
 
   useEffect(() => {
-    listReferrals({ status, urgency })
-      .then(setRows)
+    let active = true;
+    setRows(null);
+    Promise.all([
+      listReferrals({ status, urgency }),
+      listPersons(),
+      listHouseholds(),
+      listCommunities(),
+    ])
+      .then(([referrals, persons, households, communities]) => {
+        if (!active) return;
+        const personById = new Map(
+          persons.flatMap((person) => [
+            [person.id, person] as const,
+            ...("localId" in person && typeof person.localId === "string"
+              ? ([[person.localId, person]] as const)
+              : []),
+          ]),
+        );
+        const householdById = new Map(
+          households.flatMap((household) => [
+            [household.id, household] as const,
+            ...(household.localId ? ([[household.localId, household]] as const) : []),
+          ]),
+        );
+        const communityNameById = new Map(
+          communities.map((community) => [community.id, community.name]),
+        );
+        setRows(
+          referrals.map((referral) => {
+            const person = referral.person_id ? personById.get(referral.person_id) : undefined;
+            const household = person?.household_id
+              ? householdById.get(person.household_id)
+              : undefined;
+            return {
+              ...referral,
+              personName: person?.full_name ?? "Person not linked",
+              communityName: household?.community_id
+                ? (communityNameById.get(household.community_id) ?? "Community not found")
+                : "Community not linked",
+            };
+          }),
+        );
+      })
       .catch((e) => {
         toast.error(e instanceof Error ? e.message : "Failed to load");
-        setRows([]);
+        if (active) setRows([]);
       });
+    return () => {
+      active = false;
+    };
   }, [status, urgency]);
 
-  const filtered = (rows ?? []).filter((r) => {
-    if (!q.trim()) return true;
-    const needle = q.toLowerCase();
-    return (
-      (r.reason ?? "").toLowerCase().includes(needle) ||
-      (r.facility ?? "").toLowerCase().includes(needle) ||
-      (r.category ?? "").toLowerCase().includes(needle)
-    );
-  });
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return [...(rows ?? [])]
+      .filter(
+        (referral) =>
+          !needle ||
+          [
+            referral.reason,
+            referral.facility,
+            referral.category,
+            referral.personName,
+            referral.communityName,
+          ]
+            .filter(Boolean)
+            .some((value) => value!.toLowerCase().includes(needle)),
+      )
+      .sort((left, right) => {
+        const leftOpen = !["completed", "declined", "cancelled"].includes(left.status);
+        const rightOpen = !["completed", "declined", "cancelled"].includes(right.status);
+        const urgencyOrder: Record<Urgency, number> = {
+          emergency: 0,
+          urgent: 1,
+          priority: 2,
+          routine: 3,
+        };
+        const leftWaiting = Date.now() - new Date(left.submitted_at ?? left.created_at).getTime();
+        const rightWaiting =
+          Date.now() - new Date(right.submitted_at ?? right.created_at).getTime();
+        return (
+          Number(rightOpen) - Number(leftOpen) ||
+          urgencyOrder[left.urgency] - urgencyOrder[right.urgency] ||
+          (rightOpen ? rightWaiting - leftWaiting : right.created_at.localeCompare(left.created_at))
+        );
+      });
+  }, [rows, q]);
+
+  function nextAction(referral: ReferralRow): string {
+    if (referral.status === "draft" || referral.status === "pending") return "Submit referral";
+    if (referral.status === "submitted") return "Awaiting facility acknowledgment";
+    if (referral.status === "acknowledged") return "Confirm facility acceptance";
+    if (referral.status === "accepted") return "Confirm attendance and care";
+    if (referral.status === "in_progress") return "Record outcome or follow-up";
+    if (referral.status === "declined") return "Review and plan next step";
+    if (referral.status === "completed") return "Care outcome recorded";
+    return "Referral closed";
+  }
+
+  function daysWaiting(referral: ReferralRow): number {
+    const start = new Date(referral.submitted_at ?? referral.created_at).getTime();
+    return Math.max(0, Math.floor((Date.now() - start) / (24 * 60 * 60 * 1000)));
+  }
 
   return (
     <AppLayout>
@@ -164,17 +256,34 @@ function Referrals() {
                           {r.urgency}
                         </Badge>
                       </div>
-                      <div className="text-sm text-muted-foreground truncate">{r.reason}</div>
+                      <div className="text-sm text-muted-foreground truncate">
+                        {r.reason ?? "Reason not recorded"}
+                      </div>
                       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <UserRound className="h-3 w-3" />
+                          {r.personName}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {r.communityName}
+                        </span>
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
                           {r.facility ?? "—"}
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(r.created_at).toLocaleDateString()}
+                          {new Date(r.submitted_at ?? r.created_at).toLocaleDateString()}
                         </span>
+                        {!["completed", "declined", "cancelled"].includes(r.status) && (
+                          <span className="flex items-center gap-1">
+                            <Clock3 className="h-3 w-3" />
+                            {daysWaiting(r)} days waiting
+                          </span>
+                        )}
                       </div>
+                      <p className="mt-2 text-xs font-medium text-primary">Next: {nextAction(r)}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <StatusPill tone={STATUS_TONE[r.status] ?? "muted"}>

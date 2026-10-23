@@ -18,6 +18,7 @@ import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { insertCommunity } from "@/lib/registrations";
+import { COMMUNITY_ISSUES } from "@/lib/community-issues";
 import geoCommunities from "../../data/northern-ghana-communities.json";
 
 export const Route = createFileRoute("/community/new")({
@@ -49,7 +50,6 @@ type CommunityFormState = {
   pregnant: string;
   under5: string;
   highRisk: string;
-  coverage: string;
   notes: string;
   draft: boolean;
 };
@@ -86,7 +86,7 @@ const initialState: CommunityFormState = {
   supervisor: "",
   nearestFacility: "",
   primaryLanguages: ["Twi"],
-  commonHealthChallenges: ["Malaria"],
+  commonHealthChallenges: [],
   accessibility: "",
   locationDesc: "",
   gpsLat: "",
@@ -97,23 +97,11 @@ const initialState: CommunityFormState = {
   pregnant: "10",
   under5: "70",
   highRisk: "3",
-  coverage: "80",
   notes: "",
   draft: true,
 };
 
 const languageOptions = ["Twi", "English", "Ga", "Dagbani", "Hausa", "Nzema"];
-const challengeOptions = [
-  "Malaria",
-  "Nutrition gaps",
-  "ANC follow-up",
-  "Immunisation defaulters",
-  "Water access",
-  "Hypertension",
-  "Diarrhoea",
-  "Referrals",
-];
-
 function NewCommunity() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -225,7 +213,7 @@ function NewCommunity() {
     <AppLayout>
       <PageHeader
         title="Create community"
-        description="Register a new community with coverage, service, and health information"
+        description="Register a new community with service and health information"
         icon={<Save className="h-5 w-5" />}
         breadcrumbs={[{ label: "Communities", to: "/communities" }, { label: "New" }]}
         actions={
@@ -482,18 +470,24 @@ function NewCommunity() {
                 </div>
               </div>
               <div>
-                <Label>Common health challenges</Label>
+                <Label>Community-reported concerns</Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Record concerns identified through community engagement. Household reports are
+                  summarized separately.
+                </p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {challengeOptions.map((item) => (
+                  {COMMUNITY_ISSUES.map((issue) => (
                     <label
-                      key={item}
+                      key={issue.id}
                       className="flex items-center gap-2 rounded-full border px-3 py-1 text-sm"
                     >
                       <Checkbox
-                        checked={form.commonHealthChallenges.includes(item)}
-                        onCheckedChange={() => toggleListValue("commonHealthChallenges", item)}
+                        checked={form.commonHealthChallenges.includes(issue.id)}
+                        onCheckedChange={() =>
+                          toggleListValue("commonHealthChallenges", issue.id)
+                        }
                       />
-                      {item}
+                      {issue.label}
                     </label>
                   ))}
                 </div>
@@ -535,10 +529,6 @@ function NewCommunity() {
               <div>
                 <div className="text-xs text-muted-foreground">Supervisor</div>
                 <div className="font-medium">{form.supervisor || "—"}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Coverage</div>
-                <div className="font-medium">{form.coverage}%</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Status</div>

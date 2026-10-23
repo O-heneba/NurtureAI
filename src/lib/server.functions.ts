@@ -42,6 +42,7 @@ type CommunityListRow = {
   sub_district?: string | null;
   chps_zone?: string | null;
   status?: string | null;
+  common_health_challenges?: string[] | null;
 };
 
 export function sanitizeCommunityRecords(

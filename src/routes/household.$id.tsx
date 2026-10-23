@@ -17,6 +17,7 @@ import { listAssessments } from "@/lib/assessments";
 import { listFollowUps } from "@/lib/followups";
 import { listCommunities, listPregnancies } from "@/lib/registrations";
 import { listReferrals } from "@/lib/referrals";
+import { communityIssueLabel } from "@/lib/community-issues";
 
 export const Route = createFileRoute("/household/$id")({
   loader: async ({ params }) => {
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/household/$id")({
       listCommunities(),
       listPregnancies(),
       listFollowUps(),
-      listAssessments(),
+      listAssessments(1000),
       listReferrals(),
     ]);
     return { household, members, communities, pregnancies, followUps, assessments, referrals };
@@ -164,6 +165,27 @@ function HouseholdDetail() {
         </CardContent>
       </Card>
 
+      <Card className="rounded-xl mb-4">
+        <CardHeader>
+          <CardTitle className="text-base">Recorded household concerns</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {household.barriers?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {household.barriers.map((barrier, index) => (
+                <Badge key={`${barrier}-${index}`} variant="secondary">
+                  {communityIssueLabel(barrier)}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No household concerns recorded. This does not necessarily mean there are no needs.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] mb-4">
         <Card className="rounded-xl">
           <CardHeader>
@@ -184,6 +206,17 @@ function HouseholdDetail() {
                 <div className="space-y-2">
                   {members.map((person) => {
                     const personAssessments = householdAssessments.filter((assessment) => assessment.person_id === person.id);
+                    const personContextIssues = Array.from(
+                      new Set(
+                        personAssessments.flatMap((assessment) =>
+                          Array.isArray(assessment.inputs?.context_issues)
+                            ? assessment.inputs.context_issues.filter(
+                                (issue: unknown): issue is string => typeof issue === "string",
+                              )
+                            : [],
+                        ),
+                      ),
+                    );
                     const latestPriority = personAssessments
                       .map((assessment) => (assessment.inputs?.priority ?? assessment.risk_level ?? "").toString())
                       .find(Boolean) || person.priority_status || "Not recorded";
@@ -203,6 +236,15 @@ function HouseholdDetail() {
                           </div>
                           <Badge variant="outline" className="shrink-0">{latestPriority}</Badge>
                         </div>
+                        {personContextIssues.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {personContextIssues.map((issue) => (
+                              <Badge key={issue} variant="secondary">
+                                {communityIssueLabel(issue)}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </Link>
                     );
                   })}

@@ -104,9 +104,8 @@ describe("community aggregation", () => {
     const vittin = rows.find((row) => row.name === "Vittin");
 
     expect(vittin?.households).toBe(2);
-    expect(vittin?.population).toBe(3);
+    expect(vittin?.peopleRegistered).toBe(3);
     expect(vittin?.pregnant).toBe(1);
     expect(vittin?.under5).toBe(1);
-    expect(vittin?.coverage).toBeGreaterThan(0);
   });
 });

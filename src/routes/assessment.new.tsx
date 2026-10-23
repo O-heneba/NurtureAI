@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader, EmptyState, StatusPill } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,8 +53,32 @@ import {
   listAssessmentsForPerson,
 } from "@/lib/assessments";
 import { AI_UNAVAILABLE_RESULT } from "@/lib/ai-safety";
+import { listChildProfiles } from "@/lib/registrations";
+import { COMMUNITY_ISSUES } from "@/lib/community-issues";
+import {
+  calculateAgeInDays,
+  calculateAgeInMonths,
+  formatChildAge,
+  recordVaccination,
+  useChildImmunizationStatus,
+  useChildImmunizations,
+} from "@/lib/immunization";
+
+const ASSESSMENT_TYPES = [
+  "maternal",
+  "newborn",
+  "child_u5",
+  "nutrition",
+  "household",
+  "followup",
+] as const;
 
 export const Route = createFileRoute("/assessment/new")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    type: ASSESSMENT_TYPES.includes(search.type as (typeof ASSESSMENT_TYPES)[number])
+      ? (search.type as AssessmentType)
+      : undefined,
+  }),
   component: NewAssessment,
 });
 
@@ -66,16 +90,32 @@ type Person = {
   household_id: string | null;
 };
 
-type WizardStep = "person" | "type" | "consent" | "danger" | "form" | "review";
+type WizardStep = "person" | "type" | "consent" | "danger" | "form" | "review" | "sessionReview";
 
-const ORDER: WizardStep[] = ["person", "type", "consent", "danger", "form", "review"];
+type AssessmentPathwayState = {
+  data: Record<string, any>;
+  dangerSigns: string[];
+  contextIssues: string[];
+  draftId: string | null;
+};
+
+const ORDER: WizardStep[] = [
+  "person",
+  "type",
+  "consent",
+  "danger",
+  "form",
+  "review",
+  "sessionReview",
+];
 const STEP_LABEL: Record<WizardStep, string> = {
   person: "Select person",
-  type: "Assessment type",
+  type: "Choose pathways",
   consent: "Privacy & consent",
   danger: "Danger sign screening",
   form: "Structured assessment",
-  review: "Review & submit",
+  review: "Review pathway",
+  sessionReview: "Review session",
 };
 
 function calcAge(dob: string | null): string {
@@ -89,19 +129,29 @@ function calcAge(dob: string | null): string {
 }
 
 function NewAssessment() {
+  const { type: suggestedType } = useSearch({ from: "/assessment/new" });
   const navigate = useNavigate();
   const analyze = useClinicalAI();
 
   const [step, setStep] = useState<WizardStep>("person");
   const [person, setPerson] = useState<Person | null>(null);
   const [type, setType] = useState<AssessmentType | null>(null);
+  const [selectedTypes, setSelectedTypes] = useState<AssessmentType[]>([]);
+  const [pathwayStates, setPathwayStates] = useState<
+    Partial<Record<AssessmentType, AssessmentPathwayState>>
+  >({});
+  const [submittedPathways, setSubmittedPathways] = useState<
+    Partial<Record<AssessmentType, string>>
+  >({});
   const [consent, setConsent] = useState(false);
   const [dangerSigns, setDangerSigns] = useState<string[]>([]);
+  const [contextIssues, setContextIssues] = useState<string[]>([]);
   const [data, setData] = useState<Record<string, any>>({});
   const [previous, setPrevious] = useState<any | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [immunizationRefreshKey, setImmunizationRefreshKey] = useState(0);
 
   const rules: RulesOutput | null = useMemo(() => {
     if (!type) return null;
@@ -116,7 +166,7 @@ function NewAssessment() {
       case "person":
         return !!person;
       case "type":
-        return !!type;
+        return selectedTypes.length > 0;
       case "consent":
         return consent;
       case "danger":
@@ -125,17 +175,66 @@ function NewAssessment() {
         return errors.length === 0;
       case "review":
         return true;
+      case "sessionReview":
+        return true;
     }
   })();
 
   function goto(delta: number) {
+    if (step === "type" && delta > 0) {
+      const firstType = selectedTypes[0];
+      if (!firstType) return;
+      setType(firstType);
+      setDangerSigns([]);
+      setContextIssues([]);
+      setData({});
+      setDraftId(null);
+      setStep("consent");
+      return;
+    }
     const idx = ORDER.indexOf(step);
     const next = ORDER[idx + delta];
     if (next) setStep(next);
   }
 
+  function saveCurrentPathwayState() {
+    if (!type) return;
+    setPathwayStates((current) => ({
+      ...current,
+      [type]: { data, dangerSigns, contextIssues, draftId },
+    }));
+  }
+
+  function activatePathway(nextType: AssessmentType) {
+    saveCurrentPathwayState();
+    const saved = pathwayStates[nextType];
+    setType(nextType);
+    setData(saved?.data ?? {});
+    setDangerSigns(saved?.dangerSigns ?? []);
+    setContextIssues(saved?.contextIssues ?? []);
+    setDraftId(saved?.draftId ?? null);
+    setStep("danger");
+  }
+
+  function continuePathways() {
+    if (!type) return;
+    saveCurrentPathwayState();
+    const nextType = selectedTypes[selectedTypes.indexOf(type) + 1];
+    if (nextType) activatePathway(nextType);
+    else setStep("sessionReview");
+  }
+
   async function onPickPerson(p: Person) {
     setPerson(p);
+    setType(null);
+    setSelectedTypes(suggestedType ? [suggestedType] : []);
+    setPathwayStates({});
+    setSubmittedPathways({});
+    setDangerSigns([]);
+    setContextIssues([]);
+    setData({});
+    setDraftId(null);
+    setConsent(false);
     try {
       const prior = await listAssessmentsForPerson(p.id);
       if (prior.length > 0) {
@@ -155,6 +254,18 @@ function NewAssessment() {
     }
   }
 
+  const normalizedData = useMemo(() => {
+    if (!type || !person?.date_of_birth) return data;
+    const derived: Record<string, any> = { ...data };
+    if (type === "newborn") {
+      derived.age_days = calculateAgeInDays(person.date_of_birth);
+    }
+    if (type === "child_u5") {
+      derived.age_months = calculateAgeInMonths(person.date_of_birth);
+    }
+    return derived;
+  }, [type, person?.date_of_birth, data]);
+
   async function onSaveDraft() {
     if (!type || !person) return;
     setSavingDraft(true);
@@ -172,11 +283,16 @@ function NewAssessment() {
           },
           consent_given: consent,
           danger_signs: dangerSigns,
-          sections: data,
+          context_issues: contextIssues,
+          sections: normalizedData,
           previous_snapshot: previous ?? null,
         },
       });
       setDraftId(row.id);
+      setPathwayStates((current) => ({
+        ...current,
+        [type]: { data, dangerSigns, contextIssues, draftId: row.id },
+      }));
       toast.success("Draft saved");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save draft");
@@ -185,64 +301,137 @@ function NewAssessment() {
     }
   }
 
-  async function onSubmit() {
-    if (!type || !person || !rules) return;
+  async function onSubmitSession() {
+    if (!person) return;
     if (!consent) {
       toast.error("Consent is required before submission.");
       return;
     }
-    if (errors.length > 0) {
-      toast.error("Please fix validation errors first.");
-      return;
-    }
-
     setSubmitting(true);
-    let ai: Record<string, unknown> = AI_UNAVAILABLE_RESULT;
+    let completedCount = 0;
+    let lastSubmittedId: string | null = null;
+    let submittedIds = { ...submittedPathways };
     try {
-      ai = await analyze({
-        data: {
-          assessment_type: type,
-          person: {
-            sex: person.sex,
-            age_display: calcAge(person.date_of_birth),
-          },
-          danger_signs: dangerSigns,
-          sections: data,
-          rules: { priority: rules.priority, flags: rules.flags, missing: rules.missing },
-          previous: previous ?? undefined,
-        },
-      });
-    } catch {
-      toast.info("AI assistance is currently unavailable. The assessment and rules-based priority are still available.");
-    }
+      for (const pathwayType of selectedTypes) {
+        const pathway = pathwayStates[pathwayType];
+        if (!pathway) {
+          throw new Error(`${ASSESSMENT_META[pathwayType].label} is missing from this session.`);
+        }
+        if (submittedIds[pathwayType]) {
+          lastSubmittedId = submittedIds[pathwayType]!;
+          continue;
+        }
 
-    try {
-      const row = await submitAssessment({
-        id: draftId ?? undefined,
-        person_id: person.id,
-        assessment_type: type,
-        inputs: {
-          person: {
-            id: person.id,
-            full_name: person.full_name,
-            sex: person.sex,
-            dob: person.date_of_birth,
-          },
-          consent_given: true,
-          consent_at: new Date().toISOString(),
-          danger_signs: dangerSigns,
-          sections: data,
-          rules,
-          previous_snapshot: previous ?? null,
-        },
-        ai_result: ai,
-        priority: rules.priority,
-      });
+        const pathwayErrors = validate(pathwayType, pathway.data).filter(
+          (issue) => issue.level === "error",
+        );
+        if (pathwayErrors.length > 0) {
+          throw new Error(`${ASSESSMENT_META[pathwayType].label}: ${pathwayErrors[0].message}`);
+        }
 
-      toast.success("Assessment submitted");
-      navigate({ to: "/assessment/$id", params: { id: row.id } });
+        const pathwayRules = runRules(pathwayType, pathway.data, pathway.dangerSigns);
+        const pathwayData: Record<string, any> = { ...pathway.data };
+        if (person.date_of_birth && pathwayType === "newborn") {
+          pathwayData.age_days = calculateAgeInDays(person.date_of_birth);
+        }
+        if (person.date_of_birth && pathwayType === "child_u5") {
+          pathwayData.age_months = calculateAgeInMonths(person.date_of_birth);
+        }
+        let ai: Record<string, unknown> = AI_UNAVAILABLE_RESULT;
+        try {
+          ai = await analyze({
+            data: {
+              assessment_type: pathwayType,
+              person: {
+                sex: person.sex,
+                age_display: calcAge(person.date_of_birth),
+              },
+              danger_signs: pathway.dangerSigns,
+              sections: pathwayData,
+              rules: {
+                priority: pathwayRules.priority,
+                flags: pathwayRules.flags,
+                missing: pathwayRules.missing,
+              },
+              previous: previous ?? undefined,
+            },
+          });
+        } catch {
+          toast.info(
+            `AI assistance is unavailable for ${ASSESSMENT_META[pathwayType].label}; rules-based priority will be used.`,
+          );
+        }
+
+        const row = await submitAssessment({
+          id: pathway.draftId ?? undefined,
+          person_id: person.id,
+          assessment_type: pathwayType,
+          inputs: {
+            person: {
+              id: person.id,
+              full_name: person.full_name,
+              sex: person.sex,
+              dob: person.date_of_birth,
+            },
+            consent_given: true,
+            consent_at: new Date().toISOString(),
+            danger_signs: pathway.dangerSigns,
+            context_issues: pathway.contextIssues,
+            sections: pathwayData,
+            rules: pathwayRules,
+            previous_snapshot: previous ?? null,
+          },
+          ai_result: ai,
+          priority: pathwayRules.priority,
+        });
+
+        submittedIds = { ...submittedIds, [pathwayType]: row.id };
+        setSubmittedPathways(submittedIds);
+        completedCount += 1;
+        lastSubmittedId = row.id;
+
+        if (
+          (pathwayType === "newborn" || pathwayType === "child_u5") &&
+          Array.isArray(pathwayData.recorded_vaccines)
+        ) {
+          const childProfiles = await listChildProfiles();
+          const child = childProfiles.find((profile) => profile.person_id === person.id);
+          if (child) {
+            for (const vaccineId of pathwayData.recorded_vaccines as string[]) {
+              const scheduleItem = (
+                await import("@/lib/immunization")
+              ).DEFAULT_IMMUNIZATION_SCHEDULE.find((item) => item.id === vaccineId);
+              if (!scheduleItem) continue;
+              await recordVaccination({
+                child_id: child.id,
+                schedule_id: scheduleItem.id,
+                vaccine_code: scheduleItem.vaccine_code,
+                administered_date: new Date().toISOString().slice(0, 10),
+                source:
+                  pathwayType === "newborn" ? "newborn_assessment" : "child_under_5_assessment",
+                assessment_id: row.id,
+                notes: `Recorded during ${pathwayType === "newborn" ? "newborn" : "child under-5"} assessment`,
+              });
+            }
+            setImmunizationRefreshKey((current) => current + 1);
+          }
+        }
+      }
+
+      toast.success(
+        completedCount
+          ? `Submitted ${completedCount} assessment${completedCount === 1 ? "" : "s"} for ${person.full_name}.`
+          : `All selected assessments for ${person.full_name} were already submitted.`,
+      );
+      if (lastSubmittedId) {
+        navigate({ to: "/assessment/$id", params: { id: lastSubmittedId } });
+      }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Submission failed");
+      toast.error(
+        e instanceof Error
+          ? `${completedCount ? `${completedCount} assessment(s) submitted. ` : ""}${e.message}`
+          : "Submission failed",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -280,6 +469,12 @@ function NewAssessment() {
               </span>
               <span className="text-muted-foreground">{STEP_LABEL[step]}</span>
             </div>
+            {type && ["danger", "form", "review"].includes(step) && (
+              <p className="mb-2 text-xs text-muted-foreground">
+                Pathway {selectedTypes.indexOf(type) + 1} of {selectedTypes.length}:{" "}
+                {ASSESSMENT_META[type].label}
+              </p>
+            )}
             <Progress value={progress} className="h-2" />
           </div>
 
@@ -287,7 +482,19 @@ function NewAssessment() {
             {step === "person" && (
               <PersonStep person={person} onPick={onPickPerson} previous={previous} />
             )}
-            {step === "type" && <TypeStep person={person} type={type} onPick={setType} />}
+            {step === "type" && (
+              <TypeStep
+                person={person}
+                selected={selectedTypes}
+                onToggle={(selectedType) =>
+                  setSelectedTypes((current) =>
+                    current.includes(selectedType)
+                      ? current.filter((item) => item !== selectedType)
+                      : [...current, selectedType],
+                  )
+                }
+              />
+            )}
             {step === "consent" && (
               <ConsentStep person={person} consent={consent} setConsent={setConsent} />
             )}
@@ -299,11 +506,14 @@ function NewAssessment() {
                 rules={rules}
               />
             )}
-            {step === "form" && type && (
+            {step === "form" && type && person && (
               <FormStep
                 type={type}
+                person={person}
                 data={data}
                 onChange={setData}
+                contextIssues={contextIssues}
+                onContextIssuesChange={setContextIssues}
                 issues={validationIssues}
                 rules={rules}
               />
@@ -314,28 +524,60 @@ function NewAssessment() {
                 type={type}
                 data={data}
                 dangerSigns={dangerSigns}
+                contextIssues={contextIssues}
                 rules={rules}
                 previous={previous}
+              />
+            )}
+            {step === "sessionReview" && person && (
+              <SessionReviewStep
+                person={person}
+                selectedTypes={selectedTypes}
+                pathwayStates={pathwayStates}
+                submittedPathways={submittedPathways}
               />
             )}
           </div>
 
           <div className="flex justify-between mt-6 pt-6 border-t">
-            <Button variant="outline" disabled={stepIdx === 0} onClick={() => goto(-1)}>
-              <ChevronLeft className="mr-1 h-4 w-4" /> Back
-            </Button>
-            {step !== "review" ? (
-              <Button onClick={() => goto(1)} disabled={!canNext}>
-                Next <ChevronRight className="ml-1 h-4 w-4" />
+            <div className="flex gap-2">
+              <Button variant="outline" disabled={stepIdx === 0} onClick={() => goto(-1)}>
+                <ChevronLeft className="mr-1 h-4 w-4" /> Back
               </Button>
-            ) : (
-              <Button onClick={onSubmit} disabled={submitting} className="bg-primary">
+              {type &&
+                ["danger", "form", "review"].includes(step) &&
+                selectedTypes.indexOf(type) > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => activatePathway(selectedTypes[selectedTypes.indexOf(type) - 1])}
+                  >
+                    Previous pathway
+                  </Button>
+                )}
+            </div>
+            {step === "review" ? (
+              <Button onClick={continuePathways} disabled={submitting || savingDraft}>
+                {selectedTypes.indexOf(type!) < selectedTypes.length - 1
+                  ? "Save pathway & continue"
+                  : "Review session"}
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            ) : step === "sessionReview" ? (
+              <Button onClick={onSubmitSession} disabled={submitting} className="bg-primary">
                 {submitting ? (
                   <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                 ) : (
                   <Sparkles className="mr-1.5 h-4 w-4" />
                 )}
-                {submitting ? "Analysing…" : "Submit for AI review"}
+                {submitting
+                  ? "Submitting assessments…"
+                  : selectedTypes.every((item) => !!submittedPathways[item])
+                    ? "Open submitted assessment"
+                    : `Submit ${selectedTypes.filter((item) => !submittedPathways[item]).length} assessment(s)`}
+              </Button>
+            ) : (
+              <Button onClick={() => goto(1)} disabled={!canNext}>
+                Next <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             )}
           </div>
@@ -494,12 +736,12 @@ function PersonStep({
 
 function TypeStep({
   person,
-  type,
-  onPick,
+  selected,
+  onToggle,
 }: {
   person: Person | null;
-  type: AssessmentType | null;
-  onPick: (t: AssessmentType) => void;
+  selected: AssessmentType[];
+  onToggle: (type: AssessmentType) => void;
 }) {
   // Adaptive suggestions based on person data
   const isFemaleAdult = person?.sex === "F" || person?.sex === "female";
@@ -523,21 +765,23 @@ function TypeStep({
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Choose the assessment pathway. Suggested options for this person are highlighted.
+        Select one or more assessment pathways for {person?.full_name ?? "this person"}. Suggested
+        options are highlighted; select only the pathways relevant to today’s visit.
       </p>
       <div className="grid sm:grid-cols-2 gap-3">
         {(Object.keys(ASSESSMENT_META) as AssessmentType[]).map((k) => {
           const m = ASSESSMENT_META[k];
           const suggested = recommended.has(k);
-          const selected = type === k;
+          const isSelected = selected.includes(k);
           return (
             <button
               key={k}
               type="button"
-              onClick={() => onPick(k)}
+              onClick={() => onToggle(k)}
+              aria-pressed={isSelected}
               className={cn(
                 "flex items-start gap-3 rounded-xl border p-4 text-left transition-all hover:border-primary/40 hover:bg-accent/30",
-                selected && "border-primary bg-primary/5 ring-2 ring-primary/20",
+                isSelected && "border-primary bg-primary/5 ring-2 ring-primary/20",
               )}
             >
               <div className="text-2xl">{m.icon}</div>
@@ -548,11 +792,84 @@ function TypeStep({
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{m.description}</p>
               </div>
-              {selected && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
+              {isSelected && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
             </button>
           );
         })}
       </div>
+      <p className="text-xs text-muted-foreground">
+        {selected.length} pathway{selected.length === 1 ? "" : "s"} selected. Each pathway is
+        reviewed and saved as its own assessment.
+      </p>
+    </div>
+  );
+}
+
+function SessionReviewStep({
+  person,
+  selectedTypes,
+  pathwayStates,
+  submittedPathways,
+}: {
+  person: Person;
+  selectedTypes: AssessmentType[];
+  pathwayStates: Partial<Record<AssessmentType, AssessmentPathwayState>>;
+  submittedPathways: Partial<Record<AssessmentType, string>>;
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Review assessment session</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Confirm the selected pathways for {person.full_name}. Each pathway will be submitted as a
+          separate assessment record.
+        </p>
+      </div>
+      <div className="space-y-2">
+        {selectedTypes.map((pathwayType) => {
+          const state = pathwayStates[pathwayType];
+          const rules = state ? runRules(pathwayType, state.data, state.dangerSigns) : null;
+          const isSubmitted = !!submittedPathways[pathwayType];
+          return (
+            <div
+              key={pathwayType}
+              className="flex items-start justify-between gap-3 rounded-xl border p-4"
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-xl" aria-hidden="true">
+                  {ASSESSMENT_META[pathwayType].icon}
+                </span>
+                <div>
+                  <div className="font-medium">{ASSESSMENT_META[pathwayType].label}</div>
+                  {rules && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Rules-based priority: {PRIORITY_META[rules.priority].label}
+                    </div>
+                  )}
+                  {rules && rules.flags.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      {rules.flags.map((flag) => (
+                        <li key={flag.code}>{flag.message}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+              <StatusPill tone={isSubmitted ? "success" : "info"}>
+                {isSubmitted ? "Submitted" : "Ready"}
+              </StatusPill>
+            </div>
+          );
+        })}
+      </div>
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertTitle>Clinical review</AlertTitle>
+        <AlertDescription>
+          Review every pathway and its findings. AI assistance supports, but does not replace,
+          professional clinical judgment. Urgent danger signs need prompt clinical attention.
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }
@@ -709,19 +1026,125 @@ function set<T extends Record<string, any>>(obj: T, key: string, value: any): T 
 
 function FormStep({
   type,
+  person,
   data,
   onChange,
+  contextIssues,
+  onContextIssuesChange,
   issues,
   rules,
 }: {
   type: AssessmentType;
+  person: Person;
   data: Record<string, any>;
   onChange: (d: Record<string, any>) => void;
+  contextIssues: string[];
+  onContextIssuesChange: (issues: string[]) => void;
   issues: { field: string; message: string; level: "error" | "warn" }[];
   rules: RulesOutput | null;
 }) {
   const err = (f: string) => issues.find((i) => i.field === f && i.level === "error")?.message;
   const upd = (k: string, v: any) => onChange(set(data, k, v));
+  const [childId, setChildId] = useState<string | null>(null);
+  const [vaccinesRefreshKey, setVaccinesRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (!person || !["newborn", "child_u5"].includes(type)) {
+      setChildId(null);
+      return;
+    }
+
+    let active = true;
+    listChildProfiles()
+      .then((rows) => {
+        if (!active) return;
+        const match = rows.find((row) => row.person_id === person.id);
+        setChildId(match?.id ?? null);
+      })
+      .catch(() => {
+        if (active) setChildId(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [person, type]);
+
+  const { records: liveRecords } = useChildImmunizations(childId, vaccinesRefreshKey);
+  const liveSummary = useChildImmunizationStatus(childId, person.date_of_birth, vaccinesRefreshKey);
+  const recordedVaccines = Array.isArray(data.recorded_vaccines)
+    ? (data.recorded_vaccines as string[])
+    : [];
+
+  const toggleImmunization = (vaccineId: string) => {
+    const next = recordedVaccines.includes(vaccineId)
+      ? recordedVaccines.filter((item) => item !== vaccineId)
+      : [...recordedVaccines, vaccineId];
+    upd("recorded_vaccines", next);
+  };
+
+  const immunizationCards = (
+    type === "newborn"
+      ? ["bcg", "opv0", "hepb_birth"]
+      : [
+          "dpt_hepb_hib_1",
+          "opv1",
+          "pcv1",
+          "rotavirus1",
+          "dpt_hepb_hib_2",
+          "opv2",
+          "pcv2",
+          "rotavirus2",
+          "dpt_hepb_hib_3",
+          "opv3",
+          "pcv3",
+          "rotavirus3",
+          "ipv1",
+          "mr1",
+          "yellow_fever1",
+          "ipv2",
+          "mr2",
+          "vitamin_a_1",
+          "vitamin_a_2",
+          "malaria_1",
+        ]
+  )
+    .map((vaccineId) => {
+      const record = liveRecords.find(
+        (entry) =>
+          (entry.schedule_id && entry.schedule_id === vaccineId) ||
+          (!!entry.vaccine_code && entry.vaccine_code === vaccineId),
+      );
+      const status =
+        liveSummary.items.find((item: { scheduleId: string }) => item.scheduleId === vaccineId)
+          ?.status ?? (record ? "RECEIVED" : "UPCOMING");
+      return { vaccineId, status, record };
+    })
+    .filter(
+      (item) =>
+        type === "newborn" ||
+        item.status !== "RECEIVED" ||
+        recordedVaccines.includes(item.vaccineId),
+    );
+
+  const saveVaccinationSelection = async (vaccineId: string) => {
+    if (!childId) return;
+    const match = (await import("@/lib/immunization")).DEFAULT_IMMUNIZATION_SCHEDULE.find(
+      (item) => item.id === vaccineId,
+    );
+    if (!match) return;
+    await recordVaccination({
+      child_id: childId,
+      schedule_id: match.id,
+      vaccine_code: match.vaccine_code,
+      administered_date: new Date().toISOString().slice(0, 10),
+      source: type === "newborn" ? "newborn_assessment" : "child_under_5_assessment",
+      assessment_id: null,
+      notes: `Selected during ${type === "newborn" ? "newborn" : "child under-5"} assessment`,
+    });
+    setVaccinesRefreshKey((current) => current + 1);
+    toggleImmunization(vaccineId);
+  };
 
   return (
     <div className="space-y-6">
@@ -884,13 +1307,14 @@ function FormStep({
 
             {type === "newborn" && sec.key === "birth" && (
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Age (days)" required error={err("age_days")}>
-                  <Input
-                    type="number"
-                    value={data.age_days ?? ""}
-                    onChange={(e) => upd("age_days", e.target.value)}
-                  />
-                </Field>
+                <div className="sm:col-span-2 rounded-lg border bg-accent/20 p-3 text-sm">
+                  <div className="font-medium">Calculated age</div>
+                  <div className="text-muted-foreground">
+                    {person.date_of_birth
+                      ? formatChildAge(person.date_of_birth)
+                      : "Date of birth unavailable"}
+                  </div>
+                </div>
                 <Field label="Birth weight (kg)" required error={err("birth_weight_kg")}>
                   <Input
                     type="number"
@@ -982,26 +1406,72 @@ function FormStep({
               </div>
             )}
             {type === "newborn" && sec.key === "immun" && (
-              <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow label="BCG given" value={data.bcg} onChange={(v) => upd("bcg", v)} />
-                <BoolRow label="OPV0 given" value={data.opv0} onChange={(v) => upd("opv0", v)} />
-                <BoolRow
-                  label="Hep B birth dose given"
-                  value={data.hepb}
-                  onChange={(v) => upd("hepb", v)}
-                />
+              <div className="space-y-3">
+                <div className="text-sm text-muted-foreground">
+                  Record birth vaccines using the child’s actual immunization record. The status
+                  below is recalculated from date of birth and existing vaccine entries.
+                </div>
+                {immunizationCards.map(({ vaccineId, status, record }) => {
+                  const label =
+                    vaccineId === "bcg"
+                      ? "BCG"
+                      : vaccineId === "opv0"
+                        ? "OPV 0"
+                        : "Hepatitis B birth dose";
+                  const checked = !!record || recordedVaccines.includes(vaccineId);
+                  return (
+                    <label
+                      key={vaccineId}
+                      className="flex items-center justify-between gap-3 rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => {
+                            if (!record && !checked) {
+                              toggleImmunization(vaccineId);
+                            }
+                          }}
+                        />
+                        <div>
+                          <div className="text-sm font-medium">{label}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {status === "RECEIVED"
+                              ? "Received"
+                              : status === "DUE"
+                                ? "Due"
+                                : status === "OVERDUE"
+                                  ? "Overdue"
+                                  : "Upcoming"}
+                          </div>
+                        </div>
+                      </div>
+                      {!record && !checked && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => saveVaccinationSelection(vaccineId)}
+                        >
+                          Record now
+                        </Button>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
             )}
 
             {type === "child_u5" && sec.key === "anthro" && (
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Age (months)" required error={err("age_months")}>
-                  <Input
-                    type="number"
-                    value={data.age_months ?? ""}
-                    onChange={(e) => upd("age_months", e.target.value)}
-                  />
-                </Field>
+                <div className="sm:col-span-2 rounded-lg border bg-accent/20 p-3 text-sm">
+                  <div className="font-medium">Calculated age</div>
+                  <div className="text-muted-foreground">
+                    {person.date_of_birth
+                      ? `${calculateAgeInMonths(person.date_of_birth)} months · ${formatChildAge(person.date_of_birth)}`
+                      : "Date of birth unavailable"}
+                  </div>
+                </div>
                 <Field label="Weight (kg)" required error={err("weight_kg")}>
                   <Input
                     type="number"
@@ -1077,12 +1547,60 @@ function FormStep({
               </div>
             )}
             {type === "child_u5" && sec.key === "immun" && (
-              <div className="grid sm:grid-cols-2 gap-2">
-                <BoolRow
-                  label="Immunizations up to date"
-                  value={data.immun_uptodate}
-                  onChange={(v) => upd("immun_uptodate", v)}
-                />
+              <div className="space-y-3">
+                <div className="rounded-lg border bg-accent/20 p-3 text-sm">
+                  <div className="font-medium">Live immunization review</div>
+                  <div className="text-muted-foreground">
+                    {liveSummary.numberReceived} received · {liveSummary.numberDue} due ·{" "}
+                    {liveSummary.numberOverdue} overdue · {liveSummary.numberUpcoming} upcoming
+                  </div>
+                </div>
+                {immunizationCards.map(({ vaccineId, status, record }) => {
+                  const entry = liveSummary.items.find(
+                    (item: { scheduleId: string }) => item.scheduleId === vaccineId,
+                  );
+                  const label = entry?.vaccineName ?? vaccineId;
+                  const checked = !!record || recordedVaccines.includes(vaccineId);
+                  return (
+                    <label
+                      key={vaccineId}
+                      className="flex items-center justify-between gap-3 rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => {
+                            if (!record && !checked) {
+                              toggleImmunization(vaccineId);
+                            }
+                          }}
+                        />
+                        <div>
+                          <div className="text-sm font-medium">{label}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {status === "RECEIVED"
+                              ? "Received"
+                              : status === "DUE"
+                                ? "Due"
+                                : status === "OVERDUE"
+                                  ? "Overdue"
+                                  : "Upcoming"}
+                          </div>
+                        </div>
+                      </div>
+                      {!record && !checked && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => saveVaccinationSelection(vaccineId)}
+                        >
+                          Record now
+                        </Button>
+                      )}
+                    </label>
+                  );
+                })}
                 <BoolRow
                   label="Developmental milestones on track"
                   value={data.milestones_ok}
@@ -1288,6 +1806,35 @@ function FormStep({
           </section>
         ))}
       </div>
+
+      <section className="space-y-3 border-t pt-5">
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
+            Context and barriers reported
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Select concerns reported or identified during this encounter. These are contextual
+            signals, not diagnoses.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {COMMUNITY_ISSUES.map((issue) => (
+            <label key={issue.id} className="flex items-start gap-2 rounded-md border p-3 text-sm">
+              <Checkbox
+                checked={contextIssues.includes(issue.id)}
+                onCheckedChange={(checked) =>
+                  onContextIssuesChange(
+                    checked
+                      ? [...contextIssues, issue.id]
+                      : contextIssues.filter((item) => item !== issue.id),
+                  )
+                }
+              />
+              <span>{issue.label}</span>
+            </label>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -1299,6 +1846,7 @@ function ReviewStep({
   type,
   data,
   dangerSigns,
+  contextIssues,
   rules,
   previous,
 }: {
@@ -1306,6 +1854,7 @@ function ReviewStep({
   type: AssessmentType;
   data: Record<string, any>;
   dangerSigns: string[];
+  contextIssues: string[];
   rules: RulesOutput;
   previous: any | null;
 }) {
@@ -1372,6 +1921,21 @@ function ReviewStep({
           </ul>
         </div>
       )}
+
+      <div className="rounded-xl border p-4">
+        <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+          Context and barriers reported
+        </div>
+        {contextIssues.length ? (
+          <ul className="text-sm space-y-1">
+            {COMMUNITY_ISSUES.filter((issue) => contextIssues.includes(issue.id)).map((issue) => (
+              <li key={issue.id}>• {issue.label}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">No contextual concerns recorded.</p>
+        )}
+      </div>
 
       {rules.missing.length > 0 && (
         <div className="rounded-xl border p-4">

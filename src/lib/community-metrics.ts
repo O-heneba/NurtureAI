@@ -69,13 +69,10 @@ export function summarizeCommunityMetrics(
     chpsZone: community.chps_zone ?? null,
     worker: null,
     status: community.status ?? null,
-    population: personMap.get(community.id) ?? 0,
-    coverage: Math.min(100, Math.max(0, Math.round(((personMap.get(community.id) ?? 0) / Math.max(1, householdMap.get(community.id) ?? 1)) * 100))),
+    peopleRegistered: personMap.get(community.id) ?? 0,
     households: householdMap.get(community.id) ?? 0,
     pregnant: pregnantMap.get(community.id) ?? 0,
     under5: under5Map.get(community.id) ?? 0,
-    highRisk: 0,
-    dataCoverageIncomplete: false,
     subDistrict: community.sub_district ?? null,
   }));
 }

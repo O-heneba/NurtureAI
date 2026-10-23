@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { PageHeader, EmptyState, StatusPill } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import {
   getReferralOutcome,
   recordReferralOutcome,
   type ReferralRow,
+  type ReferralOutcome,
   type ReferralStatus,
 } from "@/lib/referrals";
 
@@ -55,22 +56,22 @@ function ReferralDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [row, setRow] = useState<ReferralRow | null | undefined>(undefined);
-  const [history, setHistory] = useState<Array<any>>([]);
-  const [outcome, setOutcome] = useState<any>(null);
+  const [history, setHistory] = useState<Awaited<ReturnType<typeof listReferralHistory>>>([]);
+  const [outcome, setOutcome] = useState<ReferralOutcome | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const [outForm, setOutForm] = useState({
-    seen: true,
+    seen: false,
     attended_at: "",
     facility_attended: "",
     service_received: "",
-    outcome: "care_received",
+    outcome: "unable_to_attend",
     barrier: "",
     further_action_required: false,
     notes: "",
   });
 
-  async function reload() {
+  const reload = useCallback(async () => {
     const [r, h, o] = await Promise.all([
       getReferral(id),
       listReferralHistory(id),
@@ -81,25 +82,34 @@ function ReferralDetail() {
     setOutcome(o);
     if (o)
       setOutForm({
-        seen: o.seen ?? true,
+        seen: o.seen ?? false,
         attended_at: o.attended_at ?? "",
         facility_attended: o.facility_attended ?? "",
         service_received: o.service_received ?? "",
-        outcome: o.outcome ?? "care_received",
+        outcome: o.outcome ?? (o.seen ? "care_received" : "unable_to_attend"),
         barrier: o.barrier ?? "",
         further_action_required: o.further_action_required ?? false,
         notes: o.notes ?? "",
       });
-  }
+  }, [id]);
   useEffect(() => {
     reload().catch((e) => {
       toast.error(e instanceof Error ? e.message : "Failed");
       setRow(null);
     });
-  }, [id]);
+  }, [reload]);
 
   async function onTransition(to: ReferralStatus) {
     if (!row) return;
+    if (
+      to === "completed" &&
+      (!outcome || outcome.seen !== true || outcome.further_action_required)
+    ) {
+      toast.error(
+        "Record successful care and resolve required actions before completing this referral.",
+      );
+      return;
+    }
     setBusy(true);
     try {
       await updateReferralStatus(row.id, to, note.trim() || undefined);
@@ -125,12 +135,28 @@ function ReferralDetail() {
         service_received: outForm.service_received || undefined,
         outcome: outForm.outcome || undefined,
         barrier: outForm.barrier || undefined,
-        further_action_required: outForm.further_action_required,
+        further_action_required: outForm.further_action_required || !outForm.seen,
         notes: outForm.notes || undefined,
       });
-      if (row.status !== "completed")
+      const followUpRequired = outForm.further_action_required || !outForm.seen;
+      if (followUpRequired && (row.status === "accepted" || row.status === "completed")) {
+        await updateReferralStatus(
+          row.id,
+          "in_progress",
+          "Outcome recorded; further follow-up required",
+        );
+      } else if (
+        !followUpRequired &&
+        outForm.seen &&
+        (row.status === "accepted" || row.status === "in_progress")
+      ) {
         await updateReferralStatus(row.id, "completed", "Outcome recorded");
-      toast.success("Outcome recorded");
+      }
+      toast.success(
+        followUpRequired
+          ? "Outcome recorded. Further follow-up is still needed."
+          : "Outcome recorded",
+      );
       await reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -162,7 +188,13 @@ function ReferralDetail() {
       </AppLayout>
     );
 
-  const nextOptions = NEXT_STATUS[row.status] ?? [];
+  const nextOptions = (NEXT_STATUS[row.status] ?? []).filter(
+    (status) =>
+      status !== "completed" ||
+      (!!outcome && outcome.seen === true && !outcome.further_action_required),
+  );
+  const outcomeNeedsFollowUp =
+    !!outcome && (outcome.seen === false || outcome.further_action_required);
 
   return (
     <AppLayout>
@@ -230,11 +262,28 @@ function ReferralDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {outcomeNeedsFollowUp && (
+                <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                  The person was not seen or additional action is needed. Keep this referral open
+                  and schedule a follow-up.
+                </div>
+              )}
               <div className="grid sm:grid-cols-2 gap-3">
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={outForm.seen}
-                    onCheckedChange={(v) => setOutForm((f) => ({ ...f, seen: v === true }))}
+                    onCheckedChange={(v) =>
+                      setOutForm((f) => ({
+                        ...f,
+                        seen: v === true,
+                        outcome:
+                          v === true && f.outcome === "unable_to_attend"
+                            ? "care_received"
+                            : v !== true && f.outcome === "care_received"
+                              ? "unable_to_attend"
+                              : f.outcome,
+                      }))
+                    }
                   />{" "}
                   Person was seen
                 </label>
@@ -328,10 +377,11 @@ function ReferralDetail() {
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
-                  checked={outForm.further_action_required}
+                  checked={outForm.further_action_required || !outForm.seen}
                   onCheckedChange={(v) =>
                     setOutForm((f) => ({ ...f, further_action_required: v === true }))
                   }
+                  disabled={!outForm.seen}
                 />{" "}
                 Further follow-up required
               </label>
@@ -393,7 +443,10 @@ function ReferralDetail() {
                     })
                   }
                 >
-                  <CalendarCheck className="h-4 w-4 mr-1.5" /> Schedule follow-up
+                  <CalendarCheck className="h-4 w-4 mr-1.5" />
+                  {outcomeNeedsFollowUp || row.follow_up_required
+                    ? "Schedule post-referral follow-up"
+                    : "Schedule follow-up"}
                 </Button>
               </div>
             </CardContent>

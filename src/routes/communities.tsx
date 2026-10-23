@@ -18,18 +18,32 @@ import {
   Home,
   HeartPulse,
   Baby,
-  AlertTriangle,
   Plus,
-  TrendingUp,
-  ShieldAlert,
   Users,
+  AlertTriangle,
+  CalendarClock,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { fetchCommunities, sanitizeCommunityRecords } from "@/lib/server.functions";
 import { summarizeCommunityMetrics } from "@/lib/community-metrics";
 import { listHouseholds, listPersons } from "@/lib/registrations";
+import { listAssessments } from "@/lib/assessments";
+import { listFollowUps } from "@/lib/followups";
+import { toast } from "sonner";
+import {
+  buildCommunityIssueSignals,
+  COMMUNITY_ISSUES,
+  type CommunityIssueId,
+} from "@/lib/community-issues";
 import bundledCommunities from "../../data/northern-ghana-community-records.json";
+
+type CommunityIssueSignal = {
+  id: CommunityIssueId;
+  label: string;
+  householdCount: number;
+  communityReported: boolean;
+};
 
 type CommunitySummary = {
   id: string;
@@ -39,14 +53,15 @@ type CommunitySummary = {
   chpsZone: string | null;
   worker: string | null;
   status: string | null;
-  population: number;
-  coverage: number;
+  peopleRegistered: number;
   households: number;
   pregnant: number;
   under5: number;
-  highRisk: number;
-  dataCoverageIncomplete: boolean;
   subDistrict: string | null;
+  issueSignals: CommunityIssueSignal[];
+  priorityHouseholds: number;
+  openFollowUps: number;
+  overdueFollowUps: number;
 };
 
 export const Route = createFileRoute("/communities")({
@@ -61,17 +76,20 @@ function Communities() {
   const [region, setRegion] = useState<string>("all");
   const [chpsZone, setChpsZone] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"coverage" | "population" | "name">("coverage");
+  const [issue, setIssue] = useState<CommunityIssueId | "all">("all");
+  const [sortBy, setSortBy] = useState<"attention" | "people" | "households" | "name">("attention");
 
   useEffect(() => {
     let active = true;
 
     async function loadCommunities() {
       try {
-        const [rows, households, people] = await Promise.all([
+        const [rows, households, people, assessments, followUps] = await Promise.all([
           fetchCommunitiesFn(),
           listHouseholds(),
           listPersons(),
+          listAssessments(1000),
+          listFollowUps({ scope: "all" }),
         ]);
 
         if (!active) return;
@@ -80,6 +98,91 @@ function Communities() {
           rows as Array<Record<string, unknown>>,
           bundledCommunities as Array<Record<string, unknown>>,
         );
+        const personById = new Map(people.map((person) => [person.id, person]));
+        const householdById = new Map(
+          households.flatMap((household) => [
+            [household.id, household] as const,
+            ...(household.localId ? ([[household.localId, household]] as const) : []),
+          ]),
+        );
+        const canonicalHouseholdId = (id: string) => householdById.get(id)?.id ?? id;
+        const personReports = assessments.flatMap((assessment) => {
+          if (assessment.inputs?.status === "draft" || !Array.isArray(assessment.inputs?.context_issues)) {
+            return [];
+          }
+          const person = assessment.person_id ? personById.get(assessment.person_id) : undefined;
+          if (!person?.household_id) return [];
+          return [
+            {
+              id: person.id,
+              household_id: canonicalHouseholdId(person.household_id),
+              context_issues: assessment.inputs.context_issues as string[],
+              priority: assessment.inputs?.priority ?? assessment.risk_level,
+              status: assessment.inputs?.status,
+            },
+          ];
+        });
+        const issueSignals = buildCommunityIssueSignals(
+          sanitized.map((row) => ({
+            id: String(row.id ?? row.community_code ?? row.name),
+            common_health_challenges: Array.isArray(row.common_health_challenges)
+              ? (row.common_health_challenges as string[])
+              : [],
+          })),
+          households,
+          personReports,
+        );
+        const priorityCommunityIds = new Map<string, Set<string>>();
+        const followUpCounts = new Map<string, { open: number; overdue: number }>();
+
+        for (const household of households) {
+          if (!household.community_id) continue;
+          if (!["priority", "urgent"].includes(household.priority_status ?? "")) continue;
+          const prioritySet = priorityCommunityIds.get(household.community_id) ?? new Set<string>();
+          prioritySet.add(household.id);
+          priorityCommunityIds.set(household.community_id, prioritySet);
+        }
+
+        const latestAssessmentByPerson = new Map<
+          string,
+          (typeof assessments)[number]
+        >();
+        for (const assessment of [...assessments].sort((left, right) =>
+          left.created_at.localeCompare(right.created_at),
+        )) {
+          if (assessment.person_id) latestAssessmentByPerson.set(assessment.person_id, assessment);
+        }
+
+        for (const assessment of latestAssessmentByPerson.values()) {
+          if (assessment.inputs?.status === "draft" || !assessment.person_id) continue;
+          const person = personById.get(assessment.person_id);
+          const household = person?.household_id
+            ? householdById.get(person.household_id)
+            : undefined;
+          if (!household?.community_id) continue;
+          const priority = String(assessment.inputs?.priority ?? assessment.risk_level ?? "").toLowerCase();
+          if (!["priority_review", "urgent", "high", "critical"].includes(priority)) continue;
+          const prioritySet = priorityCommunityIds.get(household.community_id) ?? new Set<string>();
+          prioritySet.add(household.id);
+          priorityCommunityIds.set(household.community_id, prioritySet);
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+        for (const followUp of followUps) {
+          if (["completed", "cancelled", "draft"].includes(followUp.status)) continue;
+          const person = followUp.person_id ? personById.get(followUp.person_id) : undefined;
+          const household = followUp.household_id
+            ? householdById.get(followUp.household_id)
+            : person?.household_id
+              ? householdById.get(person.household_id)
+              : undefined;
+          const communityId = followUp.community_id ?? household?.community_id;
+          if (!communityId) continue;
+          const counts = followUpCounts.get(communityId) ?? { open: 0, overdue: 0 };
+          counts.open += 1;
+          if (followUp.due_date < today || followUp.status === "missed") counts.overdue += 1;
+          followUpCounts.set(communityId, counts);
+        }
 
         setCommunities(
           summarizeCommunityMetrics(
@@ -102,17 +205,24 @@ function Communities() {
             chpsZone: row.chpsZone,
             worker: row.worker,
             status: row.status,
-            population: row.population,
-            coverage: row.coverage,
+            peopleRegistered: row.peopleRegistered,
             households: row.households,
             pregnant: row.pregnant,
             under5: row.under5,
-            highRisk: row.highRisk,
-            dataCoverageIncomplete: row.dataCoverageIncomplete,
             subDistrict: row.subDistrict,
+            issueSignals:
+              issueSignals.find((signal) => signal.communityId === row.id)?.issues ?? [],
+            priorityHouseholds: priorityCommunityIds.get(row.id)?.size ?? 0,
+            openFollowUps: followUpCounts.get(row.id)?.open ?? 0,
+            overdueFollowUps: followUpCounts.get(row.id)?.overdue ?? 0,
           })),
         );
-      } catch {
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? `Community indicators could not be loaded: ${error.message}`
+            : "Community indicators could not be loaded. Showing community records without issue summaries.",
+        );
         const fallback = sanitizeCommunityRecords(
           [],
           bundledCommunities as Array<Record<string, unknown>>,
@@ -140,14 +250,15 @@ function Communities() {
               chpsZone: row.chpsZone,
               worker: row.worker,
               status: row.status,
-              population: row.population,
-              coverage: row.coverage,
+              peopleRegistered: row.peopleRegistered,
               households: row.households,
               pregnant: row.pregnant,
               under5: row.under5,
-              highRisk: row.highRisk,
-              dataCoverageIncomplete: row.dataCoverageIncomplete,
               subDistrict: row.subDistrict,
+              issueSignals: [],
+              priorityHouseholds: 0,
+              openFollowUps: 0,
+              overdueFollowUps: 0,
             })),
           );
         }
@@ -215,23 +326,41 @@ function Communities() {
       const matchesRegion = region === "all" || c.region === region;
       const matchesZone = chpsZone === "all" || c.chpsZone === chpsZone;
       const matchesStatus = status === "all" || c.status === status;
-      return matchesQuery && matchesDistrict && matchesRegion && matchesZone && matchesStatus;
+      const matchesIssue =
+        issue === "all" || c.issueSignals.some((signal) => signal.id === issue);
+      return (
+        matchesQuery &&
+        matchesDistrict &&
+        matchesRegion &&
+        matchesZone &&
+        matchesStatus &&
+        matchesIssue
+      );
     });
 
     next.sort((a, b) => {
+      if (sortBy === "attention") {
+        return (
+          b.priorityHouseholds - a.priorityHouseholds ||
+          b.overdueFollowUps - a.overdueFollowUps ||
+          Math.max(...b.issueSignals.map((signal) => signal.householdCount), 0) -
+            Math.max(...a.issueSignals.map((signal) => signal.householdCount), 0) ||
+          a.name.localeCompare(b.name)
+        );
+      }
       if (sortBy === "name") return a.name.localeCompare(b.name);
-      if (sortBy === "population") return b.population - a.population;
-      return b.coverage - a.coverage;
+      if (sortBy === "households") return b.households - a.households;
+      return b.peopleRegistered - a.peopleRegistered;
     });
 
     return next;
-  }, [accessibleCommunities, q, district, region, chpsZone, status, sortBy]);
+  }, [accessibleCommunities, q, district, region, chpsZone, status, issue, sortBy]);
 
   return (
     <AppLayout>
       <PageHeader
         title="Communities"
-        description="Communities under your CHPS zone coverage"
+        description="Registered households and people across your communities"
         icon={<MapPin className="h-5 w-5" />}
         actions={
           <Link to="/community/new">
@@ -314,16 +443,32 @@ function Communities() {
             <SelectItem value="needs_attention">Needs attention</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={issue} onValueChange={(value) => setIssue(value as CommunityIssueId | "all")}>
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="Filter by recorded issue" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All recorded issues</SelectItem>
+            {COMMUNITY_ISSUES.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select
           value={sortBy}
-          onValueChange={(v) => setSortBy(v as "coverage" | "population" | "name")}
+          onValueChange={(v) =>
+            setSortBy(v as "attention" | "people" | "households" | "name")
+          }
         >
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Sort" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="coverage">Coverage %</SelectItem>
-            <SelectItem value="population">Population</SelectItem>
+            <SelectItem value="attention">Needs attention</SelectItem>
+            <SelectItem value="people">People registered</SelectItem>
+            <SelectItem value="households">Households registered</SelectItem>
             <SelectItem value="name">Name</SelectItem>
           </SelectContent>
         </Select>
@@ -350,23 +495,67 @@ function Communities() {
                         {c.chpsZone} · {c.region}
                       </div>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className="bg-success/10 text-success border-success/30 shrink-0"
-                    >
-                      {c.coverage}%
-                    </Badge>
                   </div>
+                  <div
+                    className="mb-3 flex flex-wrap gap-1.5"
+                    aria-label="Community priority indicators"
+                  >
+                    {c.priorityHouseholds > 0 && (
+                      <Badge variant="destructive">
+                        <AlertTriangle className="mr-1 h-3 w-3" />
+                        {c.priorityHouseholds} priority household
+                        {c.priorityHouseholds === 1 ? "" : "s"}
+                      </Badge>
+                    )}
+                    {c.overdueFollowUps > 0 && (
+                      <Badge variant="destructive">
+                        <CalendarClock className="mr-1 h-3 w-3" />
+                        {c.overdueFollowUps} overdue follow-up
+                        {c.overdueFollowUps === 1 ? "" : "s"}
+                      </Badge>
+                    )}
+                    {c.openFollowUps > c.overdueFollowUps && (
+                      <Badge variant="outline">
+                        {c.openFollowUps - c.overdueFollowUps} upcoming follow-up
+                        {c.openFollowUps - c.overdueFollowUps === 1 ? "" : "s"}
+                      </Badge>
+                    )}
+                    {c.priorityHouseholds === 0 && c.overdueFollowUps === 0 && (
+                      <Badge variant="secondary">No recorded priority indicators</Badge>
+                    )}
+                  </div>
+                  {c.issueSignals.length > 0 && (
+                    <div className="mb-3">
+                      <div className="mb-1.5 text-xs font-medium text-muted-foreground">
+                        Recorded community issues
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[...c.issueSignals]
+                          .sort((a, b) => b.householdCount - a.householdCount)
+                          .slice(0, 3)
+                          .map((signal) => (
+                            <Badge key={signal.id} variant="outline">
+                              {signal.label}
+                              {signal.householdCount > 0 && ` · ${signal.householdCount}`}
+                              {signal.communityReported && signal.householdCount === 0 && " · reported"}
+                            </Badge>
+                          ))}
+                        {c.issueSignals.length > 3 && (
+                          <Badge variant="secondary">+{c.issueSignals.length - 3} more</Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t">
                     <Stat
                       icon={<Home className="h-3.5 w-3.5" />}
-                      label="Households"
+                      label="Households registered"
                       value={c.households}
                     />
                     <Stat
                       icon={<Users className="h-3.5 w-3.5" />}
-                      label="Population"
-                      value={c.population}
+                      label="People registered"
+                      value={c.peopleRegistered}
                     />
                     <Stat
                       icon={<HeartPulse className="h-3.5 w-3.5" />}
@@ -384,41 +573,6 @@ function Communities() {
                       <span className="text-muted-foreground">CHPS worker</span>
                       <span className="font-medium">{c.worker}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Coverage status</span>
-                      <span className="font-medium">
-                        {c.coverage >= 85
-                          ? "On track"
-                          : c.coverage >= 75
-                            ? "Needs follow-up"
-                            : "Below target"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Data coverage</span>
-                      <span
-                        className={`font-medium ${c.dataCoverageIncomplete ? "text-warning" : "text-success"}`}
-                      >
-                        {c.dataCoverageIncomplete ? "Incomplete" : "Complete"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <TrendingUp className="h-3.5 w-3.5" /> {c.coverage}% complete
-                    </div>
-                    {c.highRisk > 0 && (
-                      <span className="inline-flex items-center gap-1 text-destructive font-medium">
-                        <AlertTriangle className="h-3 w-3" />
-                        {c.highRisk} high-risk
-                      </span>
-                    )}
-                    {c.dataCoverageIncomplete && (
-                      <span className="inline-flex items-center gap-1 text-warning font-medium">
-                        <ShieldAlert className="h-3 w-3" />
-                        Needs update
-                      </span>
-                    )}
                   </div>
                 </CardContent>
               </Card>

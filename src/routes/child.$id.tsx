@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Baby, Syringe } from "lucide-react";
 import { getChildProfile, getPerson } from "@/lib/registrations";
+import { useChildImmunizationStatus, useChildImmunizations, useImmunizationSchedule } from "@/lib/immunization";
 
 export const Route = createFileRoute("/child/$id")({
   loader: async ({ params }) => {
@@ -33,8 +34,28 @@ export const Route = createFileRoute("/child/$id")({
 
 function ChildProfile() {
   const { child, childPerson, motherPerson } = Route.useLoaderData();
-  const immunizationStatus = child.immunizations ? "Recorded" : "Not recorded";
+  const { records } = useChildImmunizations(child.id);
+  const { schedule } = useImmunizationSchedule();
+  const summary = useChildImmunizationStatus(child.id, childPerson.date_of_birth);
   const growthNotes = child.growth_notes || "No growth notes available.";
+
+  const immunizationStatus =
+    summary.numberReceived === 0
+      ? "Not started"
+      : summary.overallStatus === "overdue"
+        ? "Overdue"
+        : summary.overallStatus === "due"
+          ? "Due soon"
+          : "Up to date";
+
+  const vaccineNames = records.map((record) => {
+    const match = schedule.find(
+      (item) =>
+        (record.schedule_id && item.id === record.schedule_id) ||
+        (!!record.vaccine_code && item.vaccine_code === record.vaccine_code),
+    );
+    return match?.display_name ?? record.vaccine_code ?? "Recorded vaccine";
+  });
 
   return (
     <AppLayout>
@@ -58,9 +79,9 @@ function ChildProfile() {
         />
         <StatCard
           label="Immunizations"
-          value={immunizationStatus}
+          value={`${summary.numberReceived}/${summary.items.length || 0}`}
           icon={<Syringe className="h-4 w-4" />}
-          tone={child.immunizations ? "success" : "warning"}
+          tone={summary.overallStatus === "overdue" ? "warning" : "success"}
         />
         <StatCard
           label="Mother"
@@ -89,11 +110,25 @@ function ChildProfile() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Immunization record</CardTitle>
           </CardHeader>
-          <CardContent>
-            {child.immunizations ? (
-              <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
-                {JSON.stringify(child.immunizations, null, 2)}
-              </pre>
+          <CardContent className="space-y-2">
+            {records.length > 0 ? (
+              <>
+                <div className="text-sm font-medium">
+                  {summary.nextMilestone
+                    ? `Next milestone: ${summary.nextMilestone}`
+                    : "All routine doses currently accounted for"}
+                </div>
+                {summary.nextDueDate && (
+                  <div className="text-xs text-muted-foreground">
+                    Next due date: {summary.nextDueDate}
+                  </div>
+                )}
+                <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                  {vaccineNames.map((name) => (
+                    <li key={name}>{name}</li>
+                  ))}
+                </ul>
+              </>
             ) : (
               <p className="text-sm text-muted-foreground">No immunization data recorded yet.</p>
             )}

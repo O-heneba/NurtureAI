@@ -8,6 +8,7 @@ import { MapPin, Home, AlertTriangle, Clock3, UserRound } from "lucide-react";
 import { listAssessments } from "@/lib/assessments";
 import { listFollowUps } from "@/lib/followups";
 import { getCommunity, listHouseholdsByCommunity, listPersons } from "@/lib/registrations";
+import { communityIssueLabel, summarizeHouseholdIssues } from "@/lib/community-issues";
 
 export const Route = createFileRoute("/community/$id")({
   loader: async ({ params }) => {
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/community/$id")({
       listHouseholdsByCommunity(params.id),
       listPersons(),
       listFollowUps(),
-      listAssessments(),
+      listAssessments(1000),
     ]);
     return { c, households, people, followUps, assessments };
   },
@@ -39,10 +40,24 @@ export const Route = createFileRoute("/community/$id")({
 
 function CommunityDetail() {
   const { c, households, people, followUps, assessments } = Route.useLoaderData();
-  const hasHouseholds = households.length > 0;
+  const communityReportedIssues = (c.common_health_challenges ?? []).map(communityIssueLabel);
   const householdIds = new Set(households.map((household) => household.id));
   const householdMembers = new Map<string, number>();
   const communityPeople = people.filter((person) => !!person.household_id && householdIds.has(person.household_id));
+  const personById = new Map(communityPeople.map((person) => [person.id, person]));
+  const personIssueReports = assessments.flatMap((assessment) => {
+    const person = assessment.person_id ? personById.get(assessment.person_id) : undefined;
+    const contextIssues = assessment.inputs?.context_issues;
+    if (
+      !person?.household_id ||
+      assessment.inputs?.status === "draft" ||
+      !Array.isArray(contextIssues)
+    ) {
+      return [];
+    }
+    return [{ household_id: person.household_id, context_issues: contextIssues }];
+  });
+  const householdIssueSummaries = summarizeHouseholdIssues(households, personIssueReports);
 
   for (const person of communityPeople) {
     if (!person.household_id) continue;
@@ -57,8 +72,6 @@ function CommunityDetail() {
   );
 
   const householdPriorityPeople = new Map<string, { personName: string; level: string; assessment: string | null }[]>();
-  const personById = new Map(communityPeople.map((person) => [person.id, person]));
-
   for (const assessment of assessments) {
     if (!assessment.person_id) continue;
     const person = personById.get(assessment.person_id);
@@ -133,7 +146,7 @@ function CommunityDetail() {
         </Card>
       </div>
 
-      <Tabs defaultValue={hasHouseholds ? "households" : "overview"} className="w-full">
+      <Tabs defaultValue="overview" className="w-full">
         <TabsList className="rounded-xl mb-4 overflow-x-auto flex w-full justify-start">
           <TabsTrigger value="households">Households</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -160,6 +173,79 @@ function CommunityDetail() {
                   />
                 </div>
               </div>
+
+              <section className="space-y-4 pt-2">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Community context</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Counts include concerns recorded on a household or in any submitted assessment.
+                    They are not prevalence estimates and may not reflect current or resolved needs.
+                  </p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Community-reported concerns
+                  </h3>
+                  {communityReportedIssues.length === 0 ? (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      No community-level concerns recorded.
+                    </p>
+                  ) : (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {communityReportedIssues.map((issue, index) => (
+                        <Badge key={`${issue}-${index}`} variant="secondary">
+                          {issue}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Entered directly in the community profile.
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-4">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Concerns recorded across households
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Each household is counted once per concern. A concern not listed may be
+                    unreported or not yet recorded.
+                  </p>
+                  {householdIssueSummaries.length === 0 ? (
+                    <p className="mt-3 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                      No household concerns have been recorded yet.
+                    </p>
+                  ) : (
+                    <div className="mt-3 space-y-3">
+                      {householdIssueSummaries.map((issue) => (
+                        <div key={issue.id} className="rounded-md border p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-medium text-foreground">{issue.label}</span>
+                            <Badge variant="outline">
+                              {issue.householdCount} household
+                              {issue.householdCount === 1 ? "" : "s"}
+                            </Badge>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {issue.households.map((household) => (
+                              <Link
+                                key={household.id}
+                                to="/household/$id"
+                                params={{ id: household.id }}
+                                className="rounded-md border px-2.5 py-1.5 text-xs text-primary hover:bg-accent/40"
+                              >
+                                {household.head_name}
+                                {household.house_no ? ` · ${household.house_no}` : ""}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
 
               <div id={followUpSectionId} className="space-y-3 pt-2">
                 <div>

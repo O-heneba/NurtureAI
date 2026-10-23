@@ -170,6 +170,11 @@ function RegisterPerson() {
       toast.error("Please fix the highlighted fields");
       return;
     }
+    if (duplicateWarning) {
+      setErrors({ full_name: "A person with this name or phone already exists" });
+      toast.error("Duplicate person detected. Review the existing record instead.");
+      return;
+    }
     setErrors({});
     setSaving(true);
     try {
@@ -248,7 +253,8 @@ function RegisterPerson() {
                   Create pregnancy
                 </Button>
               )}
-              {values.profile_types[0] === "Child Health" && (
+              {(values.profile_types.includes("Newborn") ||
+                values.profile_types.includes("Child Health")) && (
                 <Button
                   onClick={() =>
                     navigate({
@@ -298,9 +304,22 @@ function RegisterPerson() {
           </div>
 
           {duplicateWarning && (
-            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning flex gap-2">
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>Possible duplicate detected for {duplicateWarning.full_name}.</span>
+              <div className="grid gap-2">
+                <span>
+                  A person with this name or phone already exists:{" "}
+                  <strong>{duplicateWarning.full_name}</strong>. New records with matching details
+                  cannot be created.
+                </span>
+                <Link
+                  to="/person/$id"
+                  params={{ id: duplicateWarning.id }}
+                  className="font-medium underline underline-offset-2"
+                >
+                  Review existing record
+                </Link>
+              </div>
             </div>
           )}
 

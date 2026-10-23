@@ -27,6 +27,7 @@ import {
   type AssessmentType,
   type Priority,
 } from "@/lib/assessment-engine";
+import { communityIssueLabel } from "@/lib/community-issues";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/assessment/$id")({
@@ -121,6 +122,9 @@ function AssessmentDetail() {
     new Set([...missing, ...(Array.isArray(ai.missing_information) ? ai.missing_information : [])]),
   );
   const notesLog: Array<{ at: string; note: string }> = row.inputs?.notes_log ?? [];
+  const contextIssues: string[] = Array.isArray(row.inputs?.context_issues)
+    ? row.inputs.context_issues.filter((issue: unknown): issue is string => typeof issue === "string")
+    : [];
 
   return (
     <AppLayout>
@@ -342,6 +346,23 @@ function AssessmentDetail() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="rounded-xl mb-4">
+        <CardContent className="p-5">
+          <div className="font-semibold mb-2">Context and barriers reported</div>
+          {contextIssues.length ? (
+            <div className="flex flex-wrap gap-2">
+              {contextIssues.map((issue) => (
+                <StatusPill key={issue} tone="muted">
+                  {communityIssueLabel(issue)}
+                </StatusPill>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No contextual concerns recorded.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="rounded-xl mb-4">
         <CardContent className="p-5">

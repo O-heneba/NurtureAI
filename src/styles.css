@@ -152,14 +152,14 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
-    letter-spacing: -0.005em;
+    letter-spacing: 0;
   }
 
   h1,
   h2,
   h3,
   h4 {
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 
   :focus-visible {

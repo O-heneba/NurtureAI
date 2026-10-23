@@ -6,12 +6,28 @@ const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 const DEFAULT_MODEL = "gemini-2.5-flash";
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+type CloudProviderResponse = {
+  choices: [{ message: { content: string } }];
+  modelId?: string;
+  provider?: string;
+};
+
+type ProviderConfig = {
+  name: string;
+  key: string | undefined;
+  model: string;
+  call: (body: {
+    model: string;
+    messages: ChatMessage[];
+    response_format?: { type: string };
+  }) => Promise<CloudProviderResponse>;
+};
 
 async function callGemini(body: {
   model: string;
   messages: ChatMessage[];
   response_format?: { type: string };
-}) {
+}): Promise<CloudProviderResponse> {
   const key = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GEMINI_API_KEY;
   if (!key)
     throw new Error(
@@ -50,8 +66,182 @@ async function callGemini(body: {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
   };
   return {
+    provider: "gemini",
+    modelId: body.model,
     choices: [{ message: { content: result.candidates?.[0]?.content?.parts?.[0]?.text ?? "" } }],
   };
+}
+
+async function callGroq(body: {
+  model: string;
+  messages: ChatMessage[];
+  response_format?: { type: string };
+}): Promise<CloudProviderResponse> {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error("GROQ_API_KEY not configured.");
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: body.model,
+      messages: body.messages,
+      response_format:
+        body.response_format?.type === "json_object" ? { type: "json_object" } : undefined,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Groq request failed (${res.status}): ${text.slice(0, 300)}`);
+  }
+
+  const result = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+
+  return {
+    provider: "groq",
+    modelId: body.model,
+    choices: [{ message: { content: result.choices?.[0]?.message?.content ?? "" } }],
+  };
+}
+
+async function callCerebras(body: {
+  model: string;
+  messages: ChatMessage[];
+  response_format?: { type: string };
+}): Promise<CloudProviderResponse> {
+  const key = process.env.CEREBRAS_API_KEY;
+  if (!key) throw new Error("CEREBRAS_API_KEY not configured.");
+
+  const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: body.model,
+      messages: body.messages,
+      response_format:
+        body.response_format?.type === "json_object" ? { type: "json_object" } : undefined,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Cerebras request failed (${res.status}): ${text.slice(0, 300)}`);
+  }
+
+  const result = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+
+  return {
+    provider: "cerebras",
+    modelId: body.model,
+    choices: [{ message: { content: result.choices?.[0]?.message?.content ?? "" } }],
+  };
+}
+
+async function callOpenRouter(body: {
+  model: string;
+  messages: ChatMessage[];
+  response_format?: { type: string };
+}): Promise<CloudProviderResponse> {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new Error("OPENROUTER_API_KEY not configured.");
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": process.env.APP_URL ?? "http://localhost:3000",
+      "X-Title": "NurtureAI",
+    },
+    body: JSON.stringify({
+      model: body.model,
+      messages: body.messages,
+      response_format:
+        body.response_format?.type === "json_object" ? { type: "json_object" } : undefined,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenRouter request failed (${res.status}): ${text.slice(0, 300)}`);
+  }
+
+  const result = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+
+  return {
+    provider: "openrouter",
+    modelId: body.model,
+    choices: [{ message: { content: result.choices?.[0]?.message?.content ?? "" } }],
+  };
+}
+
+const CLOUD_PROVIDERS: ProviderConfig[] = [
+  {
+    name: "gemini",
+    key: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GEMINI_API_KEY,
+    model: "gemini-2.5-flash",
+    call: callGemini,
+  },
+  {
+    name: "groq",
+    key: process.env.GROQ_API_KEY,
+    model: "llama-3.1-8b-instant",
+    call: callGroq,
+  },
+  {
+    name: "cerebras",
+    key: process.env.CEREBRAS_API_KEY,
+    model: "llama3.1-8b",
+    call: callCerebras,
+  },
+  {
+    name: "openrouter",
+    key: process.env.OPENROUTER_API_KEY,
+    model: "openai/gpt-oss-20b",
+    call: callOpenRouter,
+  },
+];
+
+async function callPreferredCloudProvider(body: {
+  messages: ChatMessage[];
+  response_format?: { type: string };
+}) {
+  let lastError: Error | null = null;
+
+  for (const provider of CLOUD_PROVIDERS) {
+    if (!provider.key) continue;
+
+    try {
+      return await provider.call({
+        model: provider.model,
+        messages: body.messages,
+        response_format: body.response_format,
+      });
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  throw new Error(
+    "No cloud AI provider is configured. Add at least one of GEMINI_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, or OPENROUTER_API_KEY.",
+  );
 }
 
 /* ------------------- Assessment risk analysis ------------------- */
@@ -97,8 +287,7 @@ export const assessRisk = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => AssessInput.parse(input))
   .handler(async ({ data }) => {
     const userPrompt = `Analyze this CHPS field assessment and return the JSON described.\n\n${JSON.stringify(data, null, 2)}`;
-    const resp = await callGemini({
-      model: DEFAULT_MODEL,
+    const resp = await callPreferredCloudProvider({
       messages: [
         { role: "system", content: AI_ASSESS_SYSTEM },
         { role: "user", content: userPrompt },
@@ -140,8 +329,7 @@ const GenerateInput = z.object({
 export const generateAI = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data }) => {
-    const response = await callGemini({
-      model: DEFAULT_MODEL,
+    const response = await callPreferredCloudProvider({
       messages: data.messages,
       response_format: data.responseFormat === "json" ? { type: "json_object" } : undefined,
     });
@@ -158,8 +346,7 @@ const NUTRITION_SYSTEM = `You are NurtureAI's Nutrition Assistant for CHPS commu
 export const nutritionChat = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ChatInput.parse(input))
   .handler(async ({ data }) => {
-    const resp = await callGemini({
-      model: DEFAULT_MODEL,
+    const resp = await callPreferredCloudProvider({
       messages: [{ role: "system", content: NUTRITION_SYSTEM }, ...data.messages],
     });
     return { reply: resp.choices?.[0]?.message?.content ?? "" };
@@ -218,8 +405,7 @@ export const analyzeAssessment = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => AnalyzeInput.parse(input))
   .handler(async ({ data }) => {
     const userPrompt = `Analyse the following structured community-health assessment and return the JSON described.\n\n${JSON.stringify(data, null, 2)}`;
-    const resp = await callGemini({
-      model: DEFAULT_MODEL,
+    const resp = await callPreferredCloudProvider({
       messages: [
         { role: "system", content: ANALYZE_SYSTEM },
         { role: "user", content: userPrompt },

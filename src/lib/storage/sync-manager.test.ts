@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "./db";
 import { householdStore, personStore, syncQueueStore } from "./local-store";
 import { SyncManager, queueCreate, queueDelete, queueUpdate } from "./sync-manager";
@@ -12,6 +12,18 @@ import {
   updateWorkflowPerson,
 } from "@/lib/household-person.service";
 import { listHouseholdsByCommunity } from "@/lib/registrations";
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+    from: vi.fn(() => ({
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }),
+        order: async () => ({ data: [], error: null }),
+      }),
+    })),
+  },
+}));
 
 const householdData = {
   community_id: "existing-community-id",
@@ -38,7 +50,9 @@ describe("offline synchronization infrastructure", () => {
 
     const operations = await syncQueueStore.listByPriority();
     expect(operations.map((operation) => operation.entityType)).toEqual(["households", "persons"]);
-    expect(operations.find((operation) => operation.entityType === "persons")?.payload).toMatchObject({
+    expect(
+      operations.find((operation) => operation.entityType === "persons")?.payload,
+    ).toMatchObject({
       household_id: household.localId,
     });
   });
@@ -71,7 +85,9 @@ describe("offline synchronization infrastructure", () => {
 
     const operation = await queueDelete("households", tombstone!);
     expect(operation?.operationType).toBe("delete");
-    expect((await syncQueueStore.list()).some((item) => item.operationType === "delete")).toBe(true);
+    expect((await syncQueueStore.list()).some((item) => item.operationType === "delete")).toBe(
+      true,
+    );
   });
 
   it("removes queued local-only writes when an unsynced record is deleted", async () => {
@@ -90,7 +106,11 @@ describe("offline synchronization infrastructure", () => {
     await syncQueueStore.update(operation.id, { syncStatus: "syncing" });
     const manager = new SyncManager({
       from: () => ({
-        insert: () => ({ select: () => ({ single: async () => ({ data: { id: "remote-household" }, error: null }) }) }),
+        insert: () => ({
+          select: () => ({
+            single: async () => ({ data: { id: "remote-household" }, error: null }),
+          }),
+        }),
       }),
     });
 
@@ -103,7 +123,9 @@ describe("offline synchronization infrastructure", () => {
   it("synchronizes create before the latest coalesced update", async () => {
     const household = await householdStore.create(householdData);
     await queueCreate("households", household);
-    const edited = { ...(await householdStore.update(household.localId, { head_name: "Final name" }))! };
+    const edited = {
+      ...(await householdStore.update(household.localId, { head_name: "Final name" }))!,
+    };
     await queueUpdate("households", edited);
     await householdStore.update(household.localId, { head_name: "Last name" });
     await queueUpdate("households", { ...(await householdStore.get(household.localId))! });
@@ -111,9 +133,24 @@ describe("offline synchronization infrastructure", () => {
     let remote: Record<string, unknown> = { updated_at: new Date(0).toISOString() };
     const manager = new SyncManager({
       from: (tableName: string) => ({
-        insert: () => ({ select: () => ({ single: async () => { calls.push("create"); return { data: { id: "remote-household" }, error: null }; } }) }),
-        update: (payload: Record<string, unknown>) => ({ eq: async () => { calls.push(String(payload.head_name)); remote = { ...remote, ...payload }; return { error: null }; } }),
-        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: remote, error: null }) }) }),
+        insert: () => ({
+          select: () => ({
+            single: async () => {
+              calls.push("create");
+              return { data: { id: "remote-household" }, error: null };
+            },
+          }),
+        }),
+        update: (payload: Record<string, unknown>) => ({
+          eq: async () => {
+            calls.push(String(payload.head_name));
+            remote = { ...remote, ...payload };
+            return { error: null };
+          },
+        }),
+        select: () => ({
+          eq: () => ({ maybeSingle: async () => ({ data: remote, error: null }) }),
+        }),
       }),
     });
 
@@ -129,7 +166,14 @@ describe("offline synchronization infrastructure", () => {
     let creates = 0;
     const manager = new SyncManager({
       from: () => ({
-        insert: () => ({ select: () => ({ single: async () => { creates += 1; return { data: { id: "remote-household" }, error: null }; } }) }),
+        insert: () => ({
+          select: () => ({
+            single: async () => {
+              creates += 1;
+              return { data: { id: "remote-household" }, error: null };
+            },
+          }),
+        }),
       }),
     });
 
@@ -209,7 +253,9 @@ describe("offline synchronization infrastructure", () => {
       sex: "M",
       date_of_birth: "1990-01-01",
     });
-    const editedHousehold = await updateWorkflowHousehold(household.localId, { head_name: "Ama Updated" });
+    const editedHousehold = await updateWorkflowHousehold(household.localId, {
+      head_name: "Ama Updated",
+    });
     const editedPerson = await updateWorkflowPerson(person.localId, { phone: "+233240000000" });
 
     expect(editedHousehold.head_name).toBe("Ama Updated");
@@ -223,10 +269,15 @@ describe("offline synchronization infrastructure", () => {
     let remotePerson: Record<string, unknown> = { updated_at: new Date(0).toISOString() };
     const client = {
       from: (tableName: string) => ({
-        insert: () => ({ select: () => ({ single: async () => ({ data: { id: "remote-id" }, error: null }) }) }),
+        insert: () => ({
+          select: () => ({ single: async () => ({ data: { id: "remote-id" }, error: null }) }),
+        }),
         select: () => ({
           eq: (_field: string, id: string) => ({
-            maybeSingle: async () => ({ data: tableName === "households" ? remoteHousehold : remotePerson, error: null }),
+            maybeSingle: async () => ({
+              data: tableName === "households" ? remoteHousehold : remotePerson,
+              error: null,
+            }),
           }),
         }),
         update: (payload: Record<string, unknown>) => ({
@@ -307,7 +358,9 @@ describe("offline synchronization infrastructure", () => {
       date_of_birth: "1998-02-01",
     });
 
-    await expect(updateWorkflowPerson(person.localId, { household_id: "missing-household-id" })).rejects.toThrow(/household/i);
+    await expect(
+      updateWorkflowPerson(person.localId, { household_id: "missing-household-id" }),
+    ).rejects.toThrow(/household/i);
   });
 
   it("drops a stale invalid household reference from a queued person update instead of retrying the FK failure", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { formatLocalKnowledgePrompt, LocalAIProvider } from "./local";
-import { AIError } from "../types";
+import { AIError, type AIMessage } from "../types";
 
 describe("local AI provider", () => {
   it("invokes the loaded local model and returns generated text", async () => {
@@ -34,7 +34,7 @@ describe("local AI provider", () => {
   });
 
   it("keeps the prompt compact by using only the newest user context", () => {
-    const conversation = Array.from({ length: 15 }, (_, index) => ({
+    const conversation: AIMessage[] = Array.from({ length: 15 }, (_, index) => ({
       role: index % 2 === 0 ? "user" : "assistant",
       content: `message-${index}`,
     }));

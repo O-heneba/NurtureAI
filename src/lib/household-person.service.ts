@@ -1,15 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
 import { db } from "@/lib/storage/db";
-import { householdStore, personStore } from "@/lib/storage/local-store";
+import { householdStore, personStore, syncQueueStore } from "@/lib/storage/local-store";
 import { queueCreate, queueUpdate } from "@/lib/storage/sync-manager";
 import type { LocalHousehold, LocalPerson, SyncStatus } from "@/lib/storage/types";
 
 const remote = supabase as unknown as {
   from: (table: string) => any;
+  rpc: (functionName: string, args: Record<string, unknown>) => Promise<{ error: any }>;
   auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> };
 };
 
 export type WorkflowStatus = SyncStatus | "remote";
+export const WORKFLOW_DATA_CHANGED_EVENT = "nurture:workflow-data-changed";
 
 export type HouseholdWorkflowRow = Omit<LocalHousehold, "address" | "community_id" | "phone"> & {
   id: string;
@@ -215,13 +217,13 @@ export async function createWorkflowHousehold(input: {
   location_notes?: string;
   composition_breakdown?: string;
   living_conditions?: string;
-  barriers?: string;
+  barriers?: string[];
   priority_status?: string;
   draft?: boolean;
 }): Promise<HouseholdWorkflowRow> {
   if (!browser()) throw new Error("Household creation requires a browser");
   const created_by = await currentUserId();
-  const record = await householdStore.create({ ...input, barriers: input.barriers ? input.barriers.split(",").map((v) => v.trim()).filter(Boolean) : [], created_by });
+  const record = await householdStore.create({ ...input, barriers: input.barriers ?? [], created_by });
   await queueCreate("households", record);
   return householdRow(record);
 }
@@ -278,4 +280,78 @@ export async function updateWorkflowPerson(
   if (!updated) throw new Error("Person could not be updated");
   await queueUpdate("persons", updated);
   return personRow(updated);
+}
+
+export async function deleteWorkflowPerson(id: string): Promise<void> {
+  if (!browser()) throw new Error("Person deletion requires a browser");
+  if (explicitlyOffline()) throw new Error("Connect to the internet before deleting a person");
+
+  const existing = (await personStore.get(id)) ?? (await personStore.getByRemoteId(id));
+  if (!existing) throw new Error("Person not found locally");
+  const remoteId = existing.remoteId ?? existing.localId;
+  const { error } = await remote.rpc("delete_person_cascade", { target_person_id: remoteId });
+  if (error) {
+    throw new Error(error.message || error.details || error.hint || "Person could not be deleted");
+  }
+
+  const personIds = Array.from(new Set([existing.localId, existing.remoteId].filter(Boolean))) as string[];
+  const [pregnancies, childProfiles, assessments, referrals, followUps, notes] = await Promise.all([
+    Promise.all(personIds.map((personId) => db.pregnancies.where("person_id").equals(personId).toArray())).then((rows) => rows.flat()),
+    Promise.all(personIds.map((personId) => db.child_profiles.where("person_id").equals(personId).toArray())).then((rows) => rows.flat()),
+    Promise.all(personIds.map((personId) => db.assessments.where("person_id").equals(personId).toArray())).then((rows) => rows.flat()),
+    Promise.all(personIds.map((personId) => db.referrals.where("person_id").equals(personId).toArray())).then((rows) => rows.flat()),
+    Promise.all(personIds.map((personId) => db.follow_ups.where("person_id").equals(personId).toArray())).then((rows) => rows.flat()),
+    Promise.all(personIds.map((personId) => db.person_notes.where("person_id").equals(personId).toArray())).then((rows) => rows.flat()),
+  ]);
+  const referralIds = referrals.map((row) => row.localId);
+  const followUpIds = followUps.map((row) => row.localId);
+  const [referralHistory, referralOutcomes, followUpAttempts, followUpOutcomes] = await Promise.all([
+    Promise.all(referralIds.map((referralId) => db.referral_status_history.where("referral_id").equals(referralId).toArray())).then((rows) => rows.flat()),
+    Promise.all(referralIds.map((referralId) => db.referral_outcomes.where("referral_id").equals(referralId).toArray())).then((rows) => rows.flat()),
+    Promise.all(followUpIds.map((followUpId) => db.follow_up_attempts.where("follow_up_id").equals(followUpId).toArray())).then((rows) => rows.flat()),
+    Promise.all(followUpIds.map((followUpId) => db.follow_up_outcomes.where("follow_up_id").equals(followUpId).toArray())).then((rows) => rows.flat()),
+  ]);
+  const survivingChildProfiles = (await db.child_profiles.toArray()).filter(
+    (row) => row.mother_person_id && personIds.includes(row.mother_person_id),
+  );
+  await Promise.all(
+    survivingChildProfiles.map((row) =>
+      db.child_profiles.update(row.localId, {
+        mother_person_id: null,
+        updatedAt: new Date().toISOString(),
+        syncStatus: "synced",
+      }),
+    ),
+  );
+  const recordsToDelete = [
+    ...pregnancies,
+    ...childProfiles,
+    ...assessments,
+    ...referrals,
+    ...followUps,
+    ...notes,
+    ...referralHistory,
+    ...referralOutcomes,
+    ...followUpAttempts,
+    ...followUpOutcomes,
+  ];
+  await Promise.all([
+    db.pregnancies.bulkDelete(pregnancies.map((row) => row.localId)),
+    db.child_profiles.bulkDelete(childProfiles.map((row) => row.localId)),
+    db.assessments.bulkDelete(assessments.map((row) => row.localId)),
+    db.referrals.bulkDelete(referrals.map((row) => row.localId)),
+    db.follow_ups.bulkDelete(followUps.map((row) => row.localId)),
+    db.person_notes.bulkDelete(notes.map((row) => row.localId)),
+    db.referral_status_history.bulkDelete(referralHistory.map((row) => row.localId)),
+    db.referral_outcomes.bulkDelete(referralOutcomes.map((row) => row.localId)),
+    db.follow_up_attempts.bulkDelete(followUpAttempts.map((row) => row.localId)),
+    db.follow_up_outcomes.bulkDelete(followUpOutcomes.map((row) => row.localId)),
+    db.persons.delete(existing.localId),
+  ]);
+  const deletedIds = new Set([existing.localId, ...recordsToDelete.map((row) => row.localId)]);
+  const queued = await syncQueueStore.list();
+  await Promise.all(queued.filter((operation) => deletedIds.has(operation.localId)).map((operation) => syncQueueStore.delete(operation.id)));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(WORKFLOW_DATA_CHANGED_EVENT, { detail: { type: "person-deleted", personId: remoteId } }));
+  }
 }

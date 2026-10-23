@@ -120,6 +120,10 @@ export async function listHouseholds(): Promise<
     community_id: string | null;
     address: string | null;
     phone: string | null;
+    barriers: string[] | null;
+    priority_status: string | null;
+    localId?: string;
+    remoteId?: string | null;
   }>
 > {
   if (isBrowser()) {
@@ -128,7 +132,7 @@ export async function listHouseholds(): Promise<
   }
   const { data, error } = await db
     .from("households")
-    .select("id, head_name, house_no, community_id, address, phone")
+    .select("id, head_name, house_no, community_id, address, phone, barriers, priority_status")
     .order("head_name");
   if (error) throw error;
   return data ?? [];
@@ -555,6 +559,7 @@ export async function listHouseholdsByCommunity(communityId: string): Promise<
     address: string | null;
     community_id: string | null;
     notes: string | null;
+    barriers: string[] | null;
   }>
 > {
   if (isBrowser()) {
@@ -570,6 +575,7 @@ export async function listHouseholdsByCommunity(communityId: string): Promise<
           address: row.address ?? null,
           community_id: row.community_id ?? null,
           notes: row.notes ?? null,
+          barriers: row.barriers ?? null,
         }))
         .sort((a, b) => String(a.head_name).localeCompare(String(b.head_name)));
     }
@@ -577,7 +583,7 @@ export async function listHouseholdsByCommunity(communityId: string): Promise<
 
   const { data, error } = await db
     .from("households")
-    .select("id, head_name, house_no, phone, address, community_id, notes")
+    .select("id, head_name, house_no, phone, address, community_id, notes, barriers")
     .eq("community_id", communityId)
     .order("head_name");
   if (error) throw error;

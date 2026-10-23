@@ -20,6 +20,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { listCommunities } from "@/lib/registrations";
 import { createWorkflowHousehold, listWorkflowHouseholds } from "@/lib/household-person.service";
+import { COMMUNITY_ISSUES } from "@/lib/community-issues";
 
 export const Route = createFileRoute("/register/household")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -51,7 +52,7 @@ const schema = z.object({
   location_notes: z.string().optional(),
   composition_breakdown: z.string().optional(),
   living_conditions: z.string().optional(),
-  barriers: z.string().optional(),
+  barriers: z.array(z.string()).max(COMMUNITY_ISSUES.length).optional(),
   notes: z.string().max(400).optional(),
   priority_status: z.string().optional(),
   draft: z.boolean().optional(),
@@ -68,7 +69,7 @@ type HouseholdFormState = {
   location_notes: string;
   composition_breakdown: string;
   living_conditions: string;
-  barriers: string;
+  barriers: string[];
   notes: string;
   priority_status: string;
   draft: boolean;
@@ -85,7 +86,7 @@ const initialState: HouseholdFormState = {
   location_notes: "",
   composition_breakdown: "Adults: 3; Children: 2; Pregnant women: 1",
   living_conditions: "Water: Piped water; Toilet: Private flush; Roof: Metal; Rooms: 2",
-  barriers: "Transport, cost of medication",
+  barriers: [],
   notes: "",
   priority_status: "routine",
   draft: true,
@@ -123,7 +124,7 @@ function RegisterHousehold() {
       .catch((e) => toast.error(e.message));
   }, []);
 
-  const set = (k: keyof HouseholdFormState, v: string | boolean) =>
+  const set = (k: keyof HouseholdFormState, v: string | string[] | boolean) =>
     setValues({ ...values, [k]: v as never });
 
   const duplicateWarning = useMemo(() => {
@@ -410,13 +411,32 @@ function RegisterHousehold() {
 
           {step === 4 && (
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Social / health barriers">
-                <Textarea
-                  rows={4}
-                  value={values.barriers}
-                  onChange={(e) => set("barriers", e.target.value)}
-                  placeholder="Transport, cost, stigma, communication, etc."
-                />
+              <Field label="Household concerns" className="sm:col-span-2">
+                <p className="text-xs text-muted-foreground">
+                  Select concerns reported or identified for this household. These are not clinical
+                  diagnoses.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {COMMUNITY_ISSUES.map((issue) => (
+                    <label
+                      key={issue.id}
+                      className="flex items-start gap-2 rounded-md border p-3 text-sm"
+                    >
+                      <Checkbox
+                        checked={values.barriers.includes(issue.id)}
+                        onCheckedChange={(checked) =>
+                          set(
+                            "barriers",
+                            checked
+                              ? [...values.barriers, issue.id]
+                              : values.barriers.filter((barrier) => barrier !== issue.id),
+                          )
+                        }
+                      />
+                      <span>{issue.label}</span>
+                    </label>
+                  ))}
+                </div>
               </Field>
               <Field label="Draft">
                 <div className="flex items-center gap-2 rounded-md border p-2">
@@ -447,6 +467,20 @@ function RegisterHousehold() {
               <div>
                 <div className="text-xs text-muted-foreground">Priority</div>
                 <div className="font-medium capitalize">{values.priority_status || "routine"}</div>
+              </div>
+              <div className="sm:col-span-2">
+                <div className="text-xs text-muted-foreground">Household concerns</div>
+                <div className="mt-1 font-medium">
+                  {values.barriers.length
+                    ? values.barriers
+                        .map(
+                          (barrier) =>
+                            COMMUNITY_ISSUES.find((issue) => issue.id === barrier)?.label ??
+                            barrier,
+                        )
+                        .join(", ")
+                    : "None recorded"}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Location</div>

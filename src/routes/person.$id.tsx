@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Activity, Baby, Calendar, ClipboardCheck, FileText, HeartPulse, Save, Send, User } from "lucide-react";
-import { getWorkflowHousehold, getWorkflowPerson, listWorkflowHouseholds, updateWorkflowPerson } from "@/lib/household-person.service";
+import { deleteWorkflowPerson, getWorkflowHousehold, getWorkflowPerson, listWorkflowHouseholds, updateWorkflowPerson } from "@/lib/household-person.service";
 import { listChildProfiles, listPregnanciesForPerson } from "@/lib/registrations";
 import { listAssessmentsForPerson } from "@/lib/assessments";
 import { listReferrals } from "@/lib/referrals";
@@ -57,6 +58,7 @@ function PersonDetail() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     listWorkflowHouseholds()
@@ -69,10 +71,20 @@ function PersonDetail() {
     try {
       const saved = await updateWorkflowPerson(person.localId, {
         full_name: person.full_name,
-        phone: person.phone,
-        national_id: person.national_id,
-        notes: person.notes,
+        phone: person.phone ?? null,
+        national_id: person.national_id ?? null,
+        notes: person.notes ?? null,
         household_id: person.household_id ?? null,
+        date_of_birth: person.date_of_birth ?? null,
+        sex: person.sex ?? null,
+        preferred_name: person.preferred_name ?? null,
+        marital_status: person.marital_status ?? null,
+        occupation: person.occupation ?? null,
+        education: person.education ?? null,
+        disability_status: person.disability_status ?? null,
+        emergency_contact: person.emergency_contact ?? null,
+        priority_status: person.priority_status ?? null,
+        profile_types: person.profile_types ?? [],
       });
       setPerson(saved);
       setEditing(false);
@@ -81,6 +93,19 @@ function PersonDetail() {
       setMessage(error instanceof Error ? error.message : "Sync failed");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deletePerson() {
+    if (!window.confirm(`Delete ${person.full_name} and all related health records? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await deleteWorkflowPerson(person.localId);
+      window.location.assign("/people");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Person could not be deleted");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -96,11 +121,16 @@ function PersonDetail() {
       <Card className="max-w-3xl rounded-xl">
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle className="text-base">Person details</CardTitle>
-          {editing ? (
-            <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-4 w-4" /> {saving ? "Saving" : "Save"}</Button>
-          ) : (
-            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
-          )}
+          <div className="flex gap-2">
+            {editing ? (
+              <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-4 w-4" /> {saving ? "Saving" : "Save"}</Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
+            )}
+            <Button size="sm" variant="destructive" onClick={deletePerson} disabled={deleting}>
+              {deleting ? "Deleting" : "Delete person"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm">Full name<Input disabled={!editing} value={person.full_name} onChange={(event) => setPerson({ ...person, full_name: event.target.value })} /></label>
@@ -128,17 +158,49 @@ function PersonDetail() {
               <span className="block text-muted-foreground">Not recorded</span>
             )}
           </div>
-          <div className="text-sm"><span className="text-muted-foreground">Sex</span><div className="font-medium">{person.sex === "F" ? "Female" : person.sex === "M" ? "Male" : "Not recorded"}</div></div>
-          <div className="text-sm"><span className="text-muted-foreground">Date of birth</span><div className="font-medium">{person.date_of_birth ?? "Not recorded"}</div></div>
-          <div className="text-sm"><span className="text-muted-foreground">Profile type</span><div className="font-medium">{person.profile_types?.[0] ?? "Not recorded"}</div></div>
-          <div className="text-sm"><span className="text-muted-foreground">Preferred name</span><div className="font-medium">{person.preferred_name ?? "Not recorded"}</div></div>
-          <div className="text-sm"><span className="text-muted-foreground">Marital status</span><div className="font-medium">{person.marital_status ?? "Not recorded"}</div></div>
-          <div className="text-sm"><span className="text-muted-foreground">Occupation</span><div className="font-medium">{person.occupation ?? "Not recorded"}</div></div>
-          <div className="text-sm"><span className="text-muted-foreground">Education</span><div className="font-medium">{person.education ?? "Not recorded"}</div></div>
-          <div className="text-sm"><span className="text-muted-foreground">Disability status</span><div className="font-medium">{person.disability_status ?? "Not recorded"}</div></div>
-          <div className="text-sm"><span className="text-muted-foreground">Emergency contact</span><div className="font-medium">{person.emergency_contact ?? "Not recorded"}</div></div>
-          <div className="text-sm"><span className="text-muted-foreground">Priority</span><div className="font-medium">{person.priority_status ?? "Not recorded"}</div></div>
-          {person.notes && <div className="text-sm sm:col-span-2"><span className="text-muted-foreground">Notes</span><div className="font-medium">{person.notes}</div></div>}
+          <div className="text-sm">
+            Sex
+            {editing ? (
+              <Select value={person.sex ?? "unknown"} onValueChange={(value) => setPerson({ ...person, sex: value === "unknown" ? null : value })}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select sex" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unknown">Not recorded</SelectItem>
+                  <SelectItem value="F">Female</SelectItem>
+                  <SelectItem value="M">Male</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="font-medium">{person.sex === "F" ? "Female" : person.sex === "M" ? "Male" : "Not recorded"}</div>
+            )}
+          </div>
+          <label className="text-sm">Date of birth<Input disabled={!editing} value={person.date_of_birth ?? ""} onChange={(event) => setPerson({ ...person, date_of_birth: event.target.value })} /></label>
+          <label className="text-sm">Profile type<Input disabled={!editing} value={person.profile_types?.[0] ?? ""} onChange={(event) => setPerson({ ...person, profile_types: event.target.value ? [event.target.value] : [] })} /></label>
+          <label className="text-sm">Preferred name<Input disabled={!editing} value={person.preferred_name ?? ""} onChange={(event) => setPerson({ ...person, preferred_name: event.target.value })} /></label>
+          <label className="text-sm">Marital status<Input disabled={!editing} value={person.marital_status ?? ""} onChange={(event) => setPerson({ ...person, marital_status: event.target.value })} /></label>
+          <label className="text-sm">Occupation<Input disabled={!editing} value={person.occupation ?? ""} onChange={(event) => setPerson({ ...person, occupation: event.target.value })} /></label>
+          <label className="text-sm">Education<Input disabled={!editing} value={person.education ?? ""} onChange={(event) => setPerson({ ...person, education: event.target.value })} /></label>
+          <label className="text-sm">Disability status<Input disabled={!editing} value={person.disability_status ?? ""} onChange={(event) => setPerson({ ...person, disability_status: event.target.value })} /></label>
+          <label className="text-sm">Emergency contact<Input disabled={!editing} value={person.emergency_contact ?? ""} onChange={(event) => setPerson({ ...person, emergency_contact: event.target.value })} /></label>
+          <div className="text-sm">
+            Priority
+            {editing ? (
+              <Select value={person.priority_status ?? "routine"} onValueChange={(value) => setPerson({ ...person, priority_status: value })}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="routine">Routine</SelectItem>
+                  <SelectItem value="priority">Priority</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="font-medium">{person.priority_status ?? "Not recorded"}</div>
+            )}
+          </div>
+          <label className="text-sm sm:col-span-2">Notes<Textarea disabled={!editing} value={person.notes ?? ""} onChange={(event) => setPerson({ ...person, notes: event.target.value })} /></label>
           <div className="text-sm text-muted-foreground" role="status">{message}</div>
         </CardContent>
       </Card>

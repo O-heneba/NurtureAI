@@ -7,11 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { WORKFLOW_DATA_CHANGED_EVENT } from "../lib/household-person.service";
 
 function registerOfflineShell() {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
@@ -130,15 +131,26 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+  const [dataVersion, setDataVersion] = useState(0);
 
   useEffect(() => {
     registerOfflineShell();
   }, []);
 
+  useEffect(() => {
+    const refresh = () => {
+      setDataVersion((version) => version + 1);
+      void router.invalidate();
+    };
+    window.addEventListener(WORKFLOW_DATA_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(WORKFLOW_DATA_CHANGED_EVENT, refresh);
+  }, [router]);
+
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <Outlet key={dataVersion} />
       <Toaster position="top-right" richColors />
     </QueryClientProvider>
   );
