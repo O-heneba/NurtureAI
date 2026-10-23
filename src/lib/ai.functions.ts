@@ -284,7 +284,7 @@ Schema:
 Be conservative: escalate when in doubt. Prefer locally available Ghanaian foods in nutrition advice.`;
 
 export const assessRisk = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => AssessInput.parse(input))
+  .validator((input: unknown) => AssessInput.parse(input))
   .handler(async ({ data }) => {
     const userPrompt = `Analyze this CHPS field assessment and return the JSON described.\n\n${JSON.stringify(data, null, 2)}`;
     const resp = await callPreferredCloudProvider({
@@ -327,7 +327,7 @@ const GenerateInput = z.object({
 });
 
 export const generateAI = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => GenerateInput.parse(input))
+  .validator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data }) => {
     const response = await callPreferredCloudProvider({
       messages: data.messages,
@@ -344,7 +344,7 @@ const NUTRITION_SYSTEM = `You are NurtureAI's Nutrition Assistant for CHPS commu
 - Do not diagnose or prescribe medication. Recommend clinical review when symptoms are concerning.`;
 
 export const nutritionChat = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => ChatInput.parse(input))
+  .validator((input: unknown) => ChatInput.parse(input))
   .handler(async ({ data }) => {
     const resp = await callPreferredCloudProvider({
       messages: [{ role: "system", content: NUTRITION_SYSTEM }, ...data.messages],
@@ -402,7 +402,7 @@ Rules:
 - Keep every string concise and readable on a mobile screen.`;
 
 export const analyzeAssessment = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => AnalyzeInput.parse(input))
+  .validator((input: unknown) => AnalyzeInput.parse(input))
   .handler(async ({ data }) => {
     const userPrompt = `Analyse the following structured community-health assessment and return the JSON described.\n\n${JSON.stringify(data, null, 2)}`;
     const resp = await callPreferredCloudProvider({

@@ -87,7 +87,7 @@ export const fetchCommunities = authProtectedGet.handler(async ({ context }) => 
 });
 
 export const fetchCommunityById = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "Community id"))
+  .validator((input: unknown) => assertPayload<string>(input, "Community id"))
   .handler(async ({ data: id }) => {
     const { data, error } = await supabaseAdmin
       .from("communities")
@@ -99,7 +99,7 @@ export const fetchCommunityById = createServerFn({ method: "GET" })
   });
 
 export const createCommunity = authProtected
-  .inputValidator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Community"))
+  .validator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Community"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     const { data: user, error: userError } = await supabase.auth.getUser();
@@ -124,7 +124,7 @@ export const fetchRegions = authProtectedGet.handler(async () => {
 });
 
 export const createRegion = authProtected
-  .inputValidator((input: unknown) => assertPayload<{ name: string }>(input, "Region"))
+  .validator((input: unknown) => assertPayload<{ name: string }>(input, "Region"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     await requireAdministrator(supabase);
@@ -133,7 +133,7 @@ export const createRegion = authProtected
   });
 
 export const updateRegion = authProtected
-  .inputValidator((input: unknown) => assertPayload<{ id: string; name: string }>(input, "Region"))
+  .validator((input: unknown) => assertPayload<{ id: string; name: string }>(input, "Region"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     await requireAdministrator(supabase);
@@ -142,7 +142,7 @@ export const updateRegion = authProtected
   });
 
 export const deleteRegion = authProtected
-  .inputValidator((input: unknown) => assertPayload<{ id: string }>(input, "Region"))
+  .validator((input: unknown) => assertPayload<{ id: string }>(input, "Region"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     await requireAdministrator(supabase);
@@ -151,14 +151,14 @@ export const deleteRegion = authProtected
   });
 
 export const fetchDistricts = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "Region id"))
+  .validator((input: unknown) => assertPayload<string>(input, "Region id"))
   .handler(async ({ data: region_id }) => {
   const admin = await import("./admin.geography.server");
   return admin.listDistricts(region_id);
   });
 
 export const createDistrict = authProtected
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     assertPayload<{
       name: string;
       region_id: string;
@@ -174,7 +174,7 @@ export const createDistrict = authProtected
   });
 
 export const updateDistrict = authProtected
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     assertPayload<{
       id: string;
       name: string;
@@ -191,7 +191,7 @@ export const updateDistrict = authProtected
   });
 
 export const deleteDistrict = authProtected
-  .inputValidator((input: unknown) => assertPayload<{ id: string }>(input, "District"))
+  .validator((input: unknown) => assertPayload<{ id: string }>(input, "District"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     await requireAdministrator(supabase);
@@ -200,14 +200,14 @@ export const deleteDistrict = authProtected
   });
 
 export const fetchSubDistricts = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "District id"))
+  .validator((input: unknown) => assertPayload<string>(input, "District id"))
   .handler(async ({ data: district_id }) => {
   const admin = await import("./admin.geography.server");
   return admin.listSubDistricts(district_id);
   });
 
 export const createSubDistrict = authProtected
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     assertPayload<{ name: string; district_id: string }>(input, "Sub-district"),
   )
   .handler(async ({ data: payload, context }) => {
@@ -218,7 +218,7 @@ export const createSubDistrict = authProtected
   });
 
 export const updateSubDistrict = authProtected
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     assertPayload<{ id: string; name: string; district_id: string }>(input, "Sub-district"),
   )
   .handler(async ({ data: payload, context }) => {
@@ -229,7 +229,7 @@ export const updateSubDistrict = authProtected
   });
 
 export const deleteSubDistrict = authProtected
-  .inputValidator((input: unknown) => assertPayload<{ id: string }>(input, "Sub-district"))
+  .validator((input: unknown) => assertPayload<{ id: string }>(input, "Sub-district"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     await requireAdministrator(supabase);
@@ -261,7 +261,7 @@ export const listProfilesWithRoles = authProtectedGet.handler(async ({ context }
 });
 
 export const assignRole = authProtected
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     assertPayload<{ user_id: string; role: "chps_worker" | "supervisor" | "administrator" }>(
       input,
       "Role assignment",
@@ -275,7 +275,7 @@ export const assignRole = authProtected
   });
 
 export const removeRole = authProtected
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     assertPayload<{ user_id: string; role: "chps_worker" | "supervisor" | "administrator" }>(
       input,
       "Role assignment",
@@ -298,7 +298,7 @@ export const fetchHouseholds = createServerFn({ method: "GET" })
   });
 
 export const fetchHouseholdById = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "Household id"))
+  .validator((input: unknown) => assertPayload<string>(input, "Household id"))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data: id, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
@@ -308,7 +308,7 @@ export const fetchHouseholdById = createServerFn({ method: "GET" })
   });
 
 export const fetchHouseholdsByCommunity = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "Community id"))
+  .validator((input: unknown) => assertPayload<string>(input, "Community id"))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data: communityId, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
@@ -322,7 +322,7 @@ export const fetchHouseholdsByCommunity = createServerFn({ method: "GET" })
   });
 
 export const createHousehold = authProtected
-  .inputValidator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Household"))
+  .validator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Household"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     const { data: user, error: userError } = await supabase.auth.getUser();
@@ -351,7 +351,7 @@ export const fetchPersons = createServerFn({ method: "GET" })
   });
 
 export const fetchPersonById = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "Person id"))
+  .validator((input: unknown) => assertPayload<string>(input, "Person id"))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data: id, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
@@ -361,7 +361,7 @@ export const fetchPersonById = createServerFn({ method: "GET" })
   });
 
 export const fetchPersonsByHousehold = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "Household id"))
+  .validator((input: unknown) => assertPayload<string>(input, "Household id"))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data: householdId, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
@@ -375,7 +375,7 @@ export const fetchPersonsByHousehold = createServerFn({ method: "GET" })
   });
 
 export const createPerson = authProtected
-  .inputValidator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Person"))
+  .validator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Person"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     const { data: user, error: userError } = await supabase.auth.getUser();
@@ -407,7 +407,7 @@ export const fetchAssessments = createServerFn({ method: "GET" })
   });
 
 export const fetchAssessmentById = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "Assessment id"))
+  .validator((input: unknown) => assertPayload<string>(input, "Assessment id"))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data: id, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
@@ -417,7 +417,7 @@ export const fetchAssessmentById = createServerFn({ method: "GET" })
   });
 
 export const createAssessment = authProtected
-  .inputValidator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Assessment"))
+  .validator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Assessment"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     const { data: user, error: userError } = await supabase.auth.getUser();
@@ -449,7 +449,7 @@ export const fetchReferrals = createServerFn({ method: "GET" })
   });
 
 export const fetchReferralById = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "Referral id"))
+  .validator((input: unknown) => assertPayload<string>(input, "Referral id"))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data: id, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
@@ -459,7 +459,7 @@ export const fetchReferralById = createServerFn({ method: "GET" })
   });
 
 export const createReferral = authProtected
-  .inputValidator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Referral"))
+  .validator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Referral"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     const { data: user, error: userError } = await supabase.auth.getUser();
@@ -488,7 +488,7 @@ export const fetchFollowUps = createServerFn({ method: "GET" })
   });
 
 export const fetchFollowUpById = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => assertPayload<string>(input, "Follow-up id"))
+  .validator((input: unknown) => assertPayload<string>(input, "Follow-up id"))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data: id, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
@@ -498,7 +498,7 @@ export const fetchFollowUpById = createServerFn({ method: "GET" })
   });
 
 export const createFollowUp = authProtected
-  .inputValidator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Follow-up"))
+  .validator((input: unknown) => assertPayload<Record<string, unknown>>(input, "Follow-up"))
   .handler(async ({ data: payload, context }) => {
     const supabase = context.supabase as AuthServerContext["supabase"];
     const { data: user, error: userError } = await supabase.auth.getUser();
